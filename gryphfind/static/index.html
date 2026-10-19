@@ -47,7 +47,7 @@ header .bar{display:flex;align-items:center;justify-content:space-between;gap:16
 .nav .cta.lost{background:var(--red);color:#fff}
 .nav .cta.found{background:var(--gold);color:var(--ink)}
 .nav .cta:hover{border-color:#fff}
-@media (max-width:640px){.tabs button{padding:8px 10px;font-size:15px}header .bar{gap:6px;padding-top:8px;padding-bottom:8px}.nav{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap}.nav a,.nav .cta{font-size:14px;padding:6px 8px;white-space:nowrap}.nav .long{display:none}.nav .short{display:inline}.nav a,.nav .cta{font-size:13px;padding:6px 6px}.brand h1{font-size:26px}.brand .mark{width:36px;height:36px}}
+@media (max-width:640px){.tabs{flex-wrap:wrap;width:100%}.tabs button{flex:1 1 auto;padding:8px 10px;font-size:15px}header .bar{gap:6px;padding-top:8px;padding-bottom:8px}.nav{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap}.nav a,.nav .cta{font-size:14px;padding:6px 8px;white-space:nowrap}.nav .long{display:none}.nav .short{display:inline}.nav a,.nav .cta{font-size:13px;padding:6px 6px}.brand h1{font-size:26px}.brand .mark{width:36px;height:36px}}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .brand h1{color:#fff;font-size:30px;font-weight:900;font-stretch:80%}
 .brand svg{flex:none}
@@ -186,23 +186,23 @@ textarea{min-height:84px;resize:vertical}
 .pin-actions .putback,.hist-actions .putback{border-color:var(--red);color:var(--red)}
 .pin-actions .demo{border-style:dashed;color:var(--muted);border-color:var(--muted);font-weight:400}
 
-/* red alarm widget */
-.alarm{background:var(--red);color:#fff;border:2px solid #7A001B;border-radius:6px;padding:10px 14px;margin:14px 0 0}
+/* red alarm strip */
+.alarm{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--red);color:#fff;border:2px solid #7A001B;border-radius:6px;padding:8px 12px;margin:14px 0 0}
 .alarm[hidden]{display:none}
-.alarm-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
-@media (max-width:640px){.alarm h2{font-size:18px!important}}
-.alarm h2{font-size:20px;font-weight:900;display:flex;align-items:center;gap:8px}
-.alarm p{margin:2px 0 8px;font-size:14px;max-width:70ch}
+.alarm-msg{margin:0;flex:1 1 280px;font-size:15px}
+.alarm-msg b{font-family:Archivo,sans-serif;font-stretch:80%;font-weight:900;font-size:18px;margin-right:4px}
+#alarmNext{font-variant-numeric:tabular-nums;white-space:nowrap}
 .siren{width:10px;height:10px;border-radius:50%;background:#fff;flex:none;box-shadow:0 0 0 0 rgba(255,255,255,.8)}
 @media (prefers-reduced-motion:no-preference){.siren{animation:siren 1.4s ease-out infinite}@keyframes siren{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}100%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}}
-.alarm .notify{background:#fff;color:var(--red);border-color:#fff;font-size:13px;padding:4px 10px}
-.alarm .notify[disabled]{opacity:.8;cursor:default}
-.leaving{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
-.leaving button{all:unset;cursor:pointer;flex:0 0 190px;background:#fff;color:var(--ink);border-radius:4px;display:grid;grid-template-columns:36px 1fr;gap:8px;align-items:center;padding:5px 8px;font-size:14px}
-.leaving button:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.leaving img,.leaving .noimg{width:36px;height:36px;object-fit:cover;border-radius:3px;background:#F3E2AE}
-.leaving b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.leaving small{display:block;color:var(--red);font-weight:700;font-size:12px}
+.faces{display:flex;align-items:center}
+.faces img,.faces .noimg,.faces .more{width:30px;height:30px;border-radius:50%;border:2px solid #fff;object-fit:cover;background:#F3E2AE;margin-left:-8px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--ink)}
+.faces > :first-child{margin-left:0}
+.alarm-go{background:#fff;color:var(--red);border:2px solid #fff;border-radius:4px;padding:5px 12px;font-weight:700;cursor:pointer}
+.alarm .notify{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.7);border-radius:4px;padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer}
+.alarm .notify[disabled]{opacity:.75;cursor:default}
+.tabs .tab-soon{color:var(--red)}
+.tabs .tab-soon[aria-selected=true]{background:var(--red);color:#fff}
+.soon-intro{background:var(--paper);border-left:6px solid var(--red);padding:10px 14px;margin:0 0 14px;font-size:15px}
 
 /* previous matches */
 .hist{display:grid;gap:14px;padding-bottom:48px}
@@ -278,12 +278,11 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 
 <main class="wrap">
   <section class="alarm" id="alarm" hidden aria-live="polite">
-    <div class="alarm-head">
-      <h2><span class="siren" aria-hidden="true"></span><span id="alarmTitle">Leaving the board soon</span></h2>
-      <button class="notify" id="notifyBtn" type="button">Alert me on this device</button>
-    </div>
-    <p id="alarmText"></p>
-    <div class="leaving" id="leaving"></div>
+    <span class="siren" aria-hidden="true"></span>
+    <p class="alarm-msg"><b id="alarmTitle"></b> <span id="alarmNext"></span></p>
+    <span class="faces" id="leaving" aria-hidden="true"></span>
+    <button class="alarm-go" id="alarmGo" type="button">See them</button>
+    <button class="notify" id="notifyBtn" type="button" title="Get a notification on this device when items are about to be deleted">Alert me</button>
   </section>
   <section class="hero" id="hero">
     <div>
@@ -381,6 +380,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
       <div class="tabs" role="tablist">
         <button role="tab" data-tab="found" aria-selected="true">Found items</button>
         <button role="tab" data-tab="lost" aria-selected="false">Lost items</button>
+        <button role="tab" data-tab="soon" class="tab-soon" aria-selected="false" hidden>Leaving soon</button>
         <button role="tab" data-tab="mine" aria-selected="false">My posts</button>
         <button role="tab" data-tab="matches" aria-selected="false">Previous matches</button>
       </div>
@@ -592,6 +592,7 @@ async function refresh() {
   renderAlarm(exp.posts || []);
   if (tab === "matches") return renderHistory(cl.claims || []);
   if (tab === "mine") return renderMine();
+  if (tab === "soon") return renderSoon();
   const {posts} = await api(`/api/posts?kind=${tab}`);
   $("#pins").className = "pins";
   $("#pins").innerHTML = posts.length
@@ -691,24 +692,50 @@ function renderHistory(claims) {
 
 // ---- red alarm + device notifications ----
 const notified = new Set((() => { try { return JSON.parse(sessionStorage.getItem("gf-notified") || "[]"); } catch { return []; } })());
+let leavingSoon = [], tickTimer = null;
+function fmtLeft(sec) {
+  if (sec <= 0) return "now";
+  const d = Math.floor(sec / 86400), hh = Math.floor(sec % 86400 / 3600), mm = Math.floor(sec % 3600 / 60), ss = Math.floor(sec % 60);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d ? d + "d " : ""}${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
 function renderAlarm(posts) {
-  const a = $("#alarm");
-  if (!posts.length) { a.hidden = true; return; }
+  leavingSoon = [...posts].sort((a, b) => a.expires_at - b.expires_at);
+  const a = $("#alarm"), tabBtn = document.querySelector("[data-tab=soon]");
+  tabBtn.hidden = !posts.length;
+  tabBtn.textContent = posts.length ? `Leaving soon (${posts.length})` : "Leaving soon";
+  if (!posts.length) {
+    a.hidden = true; clearInterval(tickTimer);
+    if (tab === "soon") { tab = "found"; document.querySelector("[data-tab=found]").click(); }
+    return;
+  }
   a.hidden = false;
   const n = posts.length;
-  $("#alarmTitle").textContent = `${n} item${n > 1 ? "s" : ""} leaving the board soon`;
-  $("#alarmText").textContent = `These get deleted in under ${URGENT_DAYS} days. If one is yours, or you know whose it is, act now.`;
-  $("#leaving").innerHTML = posts.map(p => `<button data-id="${p.id}">
-      ${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<span class="noimg"></span>`}
-      <span><b>${esc(p.title)}</b><small>${p.days_left <= 0 ? "Deleted today" : `${p.days_left} day${p.days_left > 1 ? "s" : ""} left`}</small></span></button>`).join("");
-  $("#leaving").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+  $("#alarmTitle").textContent = `${n} item${n > 1 ? "s" : ""} leaving the board soon.`;
+  const first = leavingSoon[0];
+  const tick = () => { $("#alarmNext").textContent = `Next one is deleted in ${fmtLeft(first.expires_at - Date.now() / 1000)}`; };
+  tick(); clearInterval(tickTimer); tickTimer = setInterval(tick, 1000);
+  const shown = leavingSoon.slice(0, 3);
+  $("#leaving").innerHTML = shown.map(p => p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<span class="noimg"></span>`).join("")
+    + (n > 3 ? `<span class="more">+${n - 3}</span>` : "");
   notify(posts);
 }
+$("#alarmGo").addEventListener("click", () => openTab("soon"));
+
+function renderSoon() {
+  $("#pins").className = "pins";
+  const intro = `<p class="soon-intro" style="grid-column:1/-1"><b>These leave the board in under ${URGENT_DAYS} days.</b> Most urgent first. If one is yours, open its matches and claim it before it's gone.</p>`;
+  $("#pins").innerHTML = leavingSoon.length ? intro + leavingSoon.map(p => `<article class="pin">${tagHTML(p, `
+      <div class="pin-actions"><button class="see" data-id="${p.id}">See matches</button></div>`)}</article>`).join("")
+    : `<div class="empty">Nothing is about to expire.</div>`;
+  $("#pins").querySelectorAll(".see").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+}
+
 function notifyState() {
   const b = $("#notifyBtn");
   if (!("Notification" in window)) { b.hidden = true; return; }
-  if (Notification.permission === "granted") { b.textContent = "Alerts on for this device"; b.disabled = true; }
-  else if (Notification.permission === "denied") { b.textContent = "Alerts blocked in browser settings"; b.disabled = true; }
+  if (Notification.permission === "granted") { b.textContent = "Alerts on"; b.disabled = true; }
+  else if (Notification.permission === "denied") { b.textContent = "Alerts blocked"; b.title = "Turn notifications on for this site in your browser settings"; b.disabled = true; }
 }
 function notify(posts) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
