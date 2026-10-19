@@ -75,12 +75,13 @@ header .bar{display:flex;align-items:center;justify-content:space-between;gap:16
 }
 .brand .mark{width:42px;height:42px;flex:none}
 img.mark{object-fit:contain;background:#fff;border-radius:50%;padding:3px;box-shadow:0 0 0 2px var(--gold)}
-.mascot{position:relative}
-.mascot{padding-top:36px}
-.mascot img{width:100%;max-height:400px;object-fit:contain;display:block;filter:drop-shadow(0 14px 18px rgba(30,60,90,.18))}
-.mascot .count-tag{position:absolute;left:0;top:0;background:#F3E2AE;border:2.5px solid #D9C27E;border-radius:4px;padding:8px 14px;text-align:center;transform:rotate(-6deg)}
-.mascot .count-tag b{display:block;font-family:Archivo,sans-serif;font-weight:900;font-size:30px;line-height:1}
-.mascot .count-tag span{font-size:13px;color:var(--muted)}
+.mascot{position:relative;padding-bottom:120px}
+.mascot-frame{position:relative}
+.mascot img{width:100%;max-height:400px;object-fit:contain;display:block;transform:scaleX(-1);filter:drop-shadow(0 14px 18px rgba(30,60,90,.18))}
+/* tag dangles from the raised front claw (5% across, 83% down in the mirrored image) */
+.hang{position:absolute;left:5%;top:83%;width:92px;margin-left:-46px;transform-origin:50% 0;pointer-events:none}
+.hang svg{display:block;width:100%;height:auto;overflow:visible}
+@media (prefers-reduced-motion:no-preference){.hang{animation:dangle 3.2s ease-in-out infinite}@keyframes dangle{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}}
 .hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
 .hero p{max-width:56ch;margin:14px 0 24px;color:var(--muted)}
 .choose{display:flex;gap:12px;flex-wrap:wrap}
@@ -565,8 +566,16 @@ document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", 
   }
   if (m.brand && m.brand.mascot) {
     const art = document.querySelector(".big-gryphon");
-    art.outerHTML = `<div class="mascot"><img src="${esc(m.brand.mascot)}" alt="Guelph Gryphon">
-      <div class="count-tag"><b id="mascotCount">0</b><span>items waiting</span></div></div>`;
+    art.outerHTML = `<div class="mascot"><div class="mascot-frame">
+      <img src="${esc(m.brand.mascot)}" alt="The Guelph Gryphon holding a claim tag">
+      <div class="hang" aria-hidden="true"><svg viewBox="-46 0 92 150">
+        <path d="M0 0 C-3 14 3 28 0 44" stroke="#5a4520" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path d="M-38 54 L-24 40 H24 L38 54 V134 H-38 Z" fill="#F3E2AE" stroke="#D9C27E" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="0" cy="46" r="5" fill="#E6F0F7" stroke="#D9C27E" stroke-width="2"/>
+        <text id="mascotCount" x="0" y="92" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="30" fill="#000">0</text>
+        <text x="0" y="110" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="10" fill="#4A4F55">items</text>
+        <text x="0" y="122" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="10" fill="#4A4F55">waiting</text>
+      </svg></div></div></div>`;
   }
   $("#engine").textContent = `Matching with ${m.embedder === "clip" ? "CLIP (open weights)" : m.embedder} on ${m.backend === "snowflake" ? "Snowflake" : "SQLite"}`;
   $("#category").insertAdjacentHTML("beforeend", m.categories.map(c => `<option>${esc(c)}</option>`).join(""));
