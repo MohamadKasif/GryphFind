@@ -1,0 +1,8 @@
+flask>=3.0
+numpy>=1.26
+pillow>=10.0
+requests>=2.31
+torch>=2.2
+transformers>=4.40
+# Optional: Snowflake backend (vector search + Cortex)
+snowflake-connector-python>=3.10

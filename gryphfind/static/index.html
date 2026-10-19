@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GryphFind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{
+  --wall:#D9DEE3;       /* painted cinderblock */
+  --wall-line:#C9CFD6;
+  --tag:#F3E2AE;        /* manila claim tag */
+  --tag-edge:#D9C27E;
+  --ink:#000;
+  --muted:#4A4F55;
+  --red:#C20430;        /* Gryphon red */
+  --gold:#FFC72A;       /* Gryphon gold */
+  --paper:#FFFFFF;
+  --focus:#1F5FBF;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;color:var(--ink);font:400 17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;
+  background-color:var(--wall);
+  background-image:
+    linear-gradient(var(--wall-line) 2px,transparent 2px),
+    linear-gradient(90deg,var(--wall-line) 2px,transparent 2px);
+  background-size:120px 60px,240px 60px;
+  background-position:0 0, 0 0;
+}
+h1,h2,h3{font-family:Archivo,sans-serif;font-stretch:72%;line-height:1.05;margin:0}
+a{color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+
+/* header */
+header{background:var(--ink);color:var(--paper);border-bottom:6px solid var(--gold)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand h1{font-size:28px;font-weight:900;font-stretch:80%}
+.brand svg{flex:none}
+.engine{font-size:14px;color:#C8CCD1}
+
+/* hero */
+.hero{padding:40px 0 24px}
+.hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
+.hero p{max-width:56ch;margin:14px 0 24px;color:var(--muted)}
+.choose{display:flex;gap:12px;flex-wrap:wrap}
+.big{border:3px solid var(--ink);padding:14px 22px;font-family:Archivo,sans-serif;font-stretch:80%;font-weight:800;font-size:22px;cursor:pointer;border-radius:4px;background:var(--paper)}
+.big[aria-pressed=true].lost{background:var(--red);color:#fff;border-color:var(--red)}
+.big[aria-pressed=true].found{background:var(--gold);border-color:var(--ink)}
+
+/* form */
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:20px;margin:8px 0 32px;display:none}
+.panel.open{display:block}
+.grid{display:grid;grid-template-columns:260px 1fr;gap:20px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.drop{border:3px dashed var(--muted);border-radius:6px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;cursor:pointer;position:relative;overflow:hidden;background:#F6F7F8}
+.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop small{color:var(--muted)}
+label{display:block;font-weight:700;margin:0 0 4px}
+.field{margin-bottom:14px}
+input[type=text],textarea,select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:4px;background:var(--paper)}
+textarea{min-height:84px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+.hint{font-size:14px;color:var(--muted);margin:4px 0 0}
+.submit{background:var(--ink);color:#fff;border:0;padding:14px 22px;border-radius:4px;font-weight:700;cursor:pointer;font-size:18px}
+.submit:disabled{opacity:.5;cursor:progress}
+.error{color:var(--red);font-weight:700;margin-top:10px}
+
+/* tags */
+.tag{position:relative;background:var(--tag);border:2px solid var(--tag-edge);border-radius:6px 6px 6px 6px;padding:14px 14px 14px 30px;
+  clip-path:polygon(18px 0,100% 0,100% 100%,18px 100%,0 calc(100% - 18px),0 18px)}
+.tag::before{content:"";position:absolute;left:8px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--wall);box-shadow:inset 0 0 0 2px var(--tag-edge)}
+.tag .kind{display:inline-block;font-size:13px;font-weight:700;padding:1px 8px;border-radius:3px;margin-bottom:6px}
+.tag .kind.lost{background:var(--red);color:#fff}
+.tag .kind.found{background:var(--gold);color:var(--ink)}
+.tag h3{font-size:22px;font-weight:800;margin-bottom:4px}
+.tag .photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:3px;margin-bottom:10px;background:#E8E2CC;display:block}
+.tag p{margin:0 0 4px}
+.meta{font-size:14px;color:var(--muted)}
+
+/* board */
+.board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.board-head h2{font-size:40px;font-weight:900;font-stretch:66%}
+.tabs{display:flex;border:3px solid var(--ink);border-radius:4px;overflow:hidden;background:var(--paper)}
+.tabs button{border:0;background:none;padding:8px 16px;font-weight:700;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ink);color:#fff}
+.stats{font-size:15px;color:var(--muted);margin:0 0 16px}
+.stats b{color:var(--ink)}
+.pins{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:48px}
+.pins .tag{cursor:pointer;text-align:left;width:100%;font:inherit}
+.empty{background:var(--paper);border:3px dashed var(--muted);border-radius:6px;padding:28px;text-align:center}
+
+/* results: the one loud moment */
+.results{display:none;margin:0 0 40px}
+.results.open{display:block}
+.results > h2{font-size:40px;font-weight:900;font-stretch:66%;margin-bottom:6px}
+.results > p{margin:0 0 18px;color:var(--muted)}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr);align-items:center;margin-bottom:26px}
+@media (max-width:720px){.pair{grid-template-columns:1fr;gap:0}.pair .knot{height:90px}}
+.knot{position:relative;height:100%;min-height:110px;display:flex;align-items:center;justify-content:center}
+.knot svg{position:absolute;inset:0;width:100%;height:100%}
+.stamp{position:relative;font-family:Archivo,sans-serif;font-stretch:62%;font-weight:900;color:var(--red);border:4px solid var(--red);border-radius:6px;padding:2px 10px;font-size:34px;line-height:1.1;background:rgba(255,255,255,.85);transform:rotate(-8deg);text-align:center}
+.stamp small{display:block;font-size:12px;font-weight:700;font-stretch:100%;line-height:1}
+.stamp.pop{animation:stamp .38s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stamp{from{transform:rotate(-8deg) scale(2.2);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
+.stamp.low{color:var(--muted);border-color:var(--muted)}
+.why{background:var(--paper);border-left:6px solid var(--gold);padding:8px 12px;margin:10px 0;font-size:15px}
+.signals{font-size:13px;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.actions button{border:2px solid var(--ink);background:var(--paper);border-radius:4px;padding:6px 12px;font-weight:700;cursor:pointer}
+.actions button.yes{background:var(--ink);color:#fff}
+.reunited{font-weight:700;color:var(--red)}
+.back{background:none;border:0;text-decoration:underline;cursor:pointer;padding:0;margin-bottom:12px}
+footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.stamp.pop{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="GryphFind home">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M6 2h18l4 4v22H6l-4-4V6z" fill="#F3E2AE"/><circle cx="9" cy="15" r="3" fill="#000"/><path d="M14 9h10M14 15h10M14 21h7" stroke="#C20430" stroke-width="3"/></svg>
+      <h1>GryphFind</h1>
+    </a>
+    <span class="engine" id="engine"></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" id="hero">
+    <h2>Lost it on campus? Someone probably found it.</h2>
+    <p>Post a photo or a description. An open-source image model compares it with every item on the other side of the board and shows you the most likely matches.</p>
+    <div class="choose" role="group" aria-label="What happened?">
+      <button class="big lost" data-kind="lost" aria-pressed="false">I lost something</button>
+      <button class="big found" data-kind="found" aria-pressed="false">I found something</button>
+    </div>
+  </section>
+
+  <form class="panel" id="form" novalidate>
+    <div class="grid">
+      <div>
+        <label class="drop" id="drop">
+          <input type="file" name="image" accept="image/*" capture="environment" aria-label="Photo of the item">
+          <strong id="dropTitle">Add a photo</strong>
+          <small id="dropHint">Tap to use your camera</small>
+        </label>
+      </div>
+      <div>
+        <div class="field">
+          <label for="title">What is it?</label>
+          <input type="text" id="title" name="title" maxlength="120" placeholder="Blue Hydro Flask">
+        </div>
+        <div class="field">
+          <label for="description">Details</label>
+          <textarea id="description" name="description" maxlength="1000" placeholder="Dented at the bottom, Guelph Gryphons sticker, black lid"></textarea>
+          <p class="hint" id="detailHint">Stickers, scratches, colours. The more specific, the better the match.</p>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="location">Where?</label>
+            <input type="text" id="location" name="location" list="places" maxlength="80" placeholder="McLaughlin Library">
+            <datalist id="places">
+              <option>McLaughlin Library</option><option>University Centre</option><option>Rozanski Hall</option>
+              <option>Science Complex</option><option>Mackinnon</option><option>Athletics Centre</option>
+              <option>Johnston Green</option><option>Thornbrough</option><option>Summerlee Science Complex</option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="category">Type</label>
+            <select id="category" name="category"><option value="">Detect from photo</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="contact">How can they reach you?</label>
+          <input type="text" id="contact" name="contact" maxlength="120" placeholder="uoguelph.ca email or Instagram handle">
+        </div>
+        <button class="submit" id="submit" type="submit">Post and find matches</button>
+        <div class="error" id="error" role="alert"></div>
+      </div>
+    </div>
+  </form>
+
+  <section class="results" id="results" aria-live="polite"></section>
+
+  <section id="board">
+    <div class="board-head">
+      <h2>On the board</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="found" aria-selected="true">Found items</button>
+        <button role="tab" data-tab="lost" aria-selected="false">Lost items</button>
+      </div>
+    </div>
+    <p class="stats" id="stats"></p>
+    <div class="pins" id="pins"></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  Built at Hacktoberfest Hack Day Guelph. Open source under the MIT licence. Meet in a public place to hand items back.
+</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let kind = null, tab = "found";
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  return j;
+}
+
+function ago(t){const s=(Date.now()/1000-t);if(s<3600)return Math.max(1,Math.round(s/60))+" min ago";if(s<86400)return Math.round(s/3600)+" h ago";return Math.round(s/86400)+" d ago";}
+
+function tagHTML(p, extra = "") {
+  return `<div class="tag">
+    <span class="kind ${p.kind}">${p.kind === "lost" ? "Lost" : "Found"} · ${esc(p.category)}</span>
+    ${p.image_url ? `<img class="photo" src="${esc(p.image_url)}" alt="${esc(p.title)}">` : ""}
+    <h3>${esc(p.title)}</h3>
+    ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+    <p class="meta">${p.location ? esc(p.location) + ", " : ""}${ago(p.created_at)}</p>
+    ${extra}
+  </div>`;
+}
+
+// mode buttons
+document.querySelectorAll(".big").forEach(b => b.addEventListener("click", () => {
+  kind = b.dataset.kind;
+  document.querySelectorAll(".big").forEach(x => x.setAttribute("aria-pressed", x === b));
+  $("#form").classList.add("open");
+  $("#title").placeholder = kind === "lost" ? "Blue Hydro Flask" : "Water bottle";
+  $("#dropTitle").textContent = kind === "lost" ? "Add a photo if you have one" : "Take a photo of it";
+  $("#detailHint").textContent = kind === "lost"
+    ? "No photo? Describe it. The model matches words to photos."
+    : "Leave out one unique detail so the owner can prove it's theirs.";
+  $("#contact").placeholder = kind === "lost" ? "uoguelph.ca email or Instagram handle" : "Where you left it, e.g. UC front desk";
+  $("#form").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+  $("#title").focus({preventScroll:true});
+}));
+
+// photo preview
+$("#drop input").addEventListener("change", e => {
+  const f = e.target.files[0]; const old = $("#drop img"); if (old) old.remove();
+  if (!f) return;
+  const img = document.createElement("img"); img.alt = "Selected photo"; img.src = URL.createObjectURL(f);
+  $("#drop").prepend(img);
+});
+
+// submit
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault(); $("#error").textContent = "";
+  const fd = new FormData(e.target); fd.append("kind", kind);
+  if (!fd.get("image")?.size && !fd.get("title").trim() && !fd.get("description").trim()) {
+    $("#error").textContent = "Add a photo or describe the item to find matches."; return;
+  }
+  $("#submit").disabled = true; $("#submit").textContent = "Comparing with the board…";
+  try {
+    const res = await api("/api/posts", {method: "POST", body: fd});
+    e.target.reset(); const im = $("#drop img"); if (im) im.remove();
+    $("#form").classList.remove("open");
+    showResults(res); refresh();
+  } catch (err) { $("#error").textContent = err.message; }
+  finally { $("#submit").disabled = false; $("#submit").textContent = "Post and find matches"; }
+});
+
+function knot(score, i) {
+  const low = score < 50;
+  return `<div class="knot" aria-hidden="true">
+    <svg viewBox="0 0 120 110" preserveAspectRatio="none"><path d="M0 55 C30 ${20+i*7}, 90 ${95-i*5}, 120 55" fill="none" stroke="${low ? "#4A4F55" : "#C20430"}" stroke-width="3" ${low ? 'stroke-dasharray="6 6"' : ""}/></svg>
+    <div class="stamp pop ${low ? "low" : ""}" style="animation-delay:${i*120}ms">${score}%<small>${low ? "unlikely" : "match"}</small></div>
+  </div>`;
+}
+
+function showResults({post, matches}) {
+  const r = $("#results"); r.classList.add("open");
+  const other = post.kind === "lost" ? "found" : "lost";
+  const good = matches.filter(m => m.score >= 50);
+  let html = `<button class="back" onclick="closeResults()">Back to the board</button>
+    <h2>${good.length ? `${good.length} likely match${good.length > 1 ? "es" : ""}` : "No strong matches yet"}</h2>
+    <p>${good.length ? `Your ${post.kind} post is on the left, ${other} items on the right.` : `Your post is on the board now. When someone posts a ${other} item that looks like yours, it will show up here.`}</p>`;
+  if (!matches.length) html += `<div class="pair">${tagHTML(post)}</div>`;
+  matches.forEach((m, i) => {
+    const s = m.signals, sig = [s.img_img!=null&&`photo vs photo ${s.img_img}`, s.cross!=null&&`words vs photo ${s.cross}`, s.txt_txt!=null&&`words vs words ${s.txt_txt}`].filter(Boolean).join(", ");
+    const c = m.post;
+    const extra = `${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
+      <p class="signals">${sig}</p>
+      ${c.contact ? `<p><b>${c.kind === "found" ? "Pick up / contact" : "Owner"}:</b> ${esc(c.contact)}</p>` : ""}
+      <div class="actions"><button class="yes" data-a="${post.id}" data-b="${c.id}">${post.kind === "lost" ? "This is mine" : "This is theirs"}</button></div>`;
+    html += `<div class="pair">${i === 0 ? tagHTML(post) : "<div></div>"}${knot(m.score, i)}${tagHTML(c, extra)}</div>`;
+  });
+  r.innerHTML = html;
+  r.querySelectorAll(".yes").forEach(b => b.addEventListener("click", async () => {
+    await api(`/api/posts/${b.dataset.a}/resolve`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({match_id: b.dataset.b})});
+    b.parentElement.innerHTML = `<span class="reunited">Marked as reunited. Both posts are off the board.</span>`;
+    refresh();
+  }));
+  r.scrollIntoView({block: "start"});
+}
+function closeResults(){ $("#results").classList.remove("open"); $("#board").scrollIntoView({block:"start"}); }
+
+// board
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.tab; document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b)); refresh();
+}));
+async function refresh() {
+  const [{posts}, st] = await Promise.all([api(`/api/posts?kind=${tab}`), api("/api/stats")]);
+  $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.reunited}</b> reunited.`;
+  $("#pins").innerHTML = posts.length
+    ? posts.map(p => `<button class="tag-btn" data-id="${p.id}" style="all:unset;cursor:pointer;display:block" aria-label="See matches for ${esc(p.title)}">${tagHTML(p)}</button>`).join("")
+    : `<div class="empty">Nothing ${tab} yet. ${tab === "found" ? "Found something? Post it above." : "Lost something? Post it above."}</div>`;
+  $("#pins").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+}
+
+(async () => {
+  const m = await api("/api/meta");
+  $("#engine").textContent = `Matching with ${m.embedder === "clip" ? "CLIP (open weights)" : m.embedder} on ${m.backend === "snowflake" ? "Snowflake" : "SQLite"}`;
+  $("#category").insertAdjacentHTML("beforeend", m.categories.map(c => `<option>${esc(c)}</option>`).join(""));
+  refresh();
+})();
+</script>
+</body>
+</html>
