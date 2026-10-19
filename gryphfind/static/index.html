@@ -37,17 +37,27 @@ button,input,textarea,select{font:inherit;color:inherit}
 
 /* header */
 header{background:var(--ink);color:var(--paper);border-bottom:6px solid var(--gold)}
-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;padding-bottom:14px}
+header{position:sticky;top:0;z-index:10}
+header .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
+.nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav a{color:#fff;text-decoration:none;font-weight:700;padding:8px 12px;border-radius:4px}
+.nav a:hover,.nav a[aria-current=true]{background:#2A2A2A}
+.nav .cta{border:2px solid transparent;border-radius:4px;padding:7px 14px;font-weight:700;cursor:pointer}
+.nav .cta.lost{background:var(--red);color:#fff}
+.nav .cta.found{background:var(--gold);color:var(--ink)}
+.nav .cta:hover{border-color:#fff}
+@media (max-width:640px){header .bar{gap:6px;padding-top:8px;padding-bottom:8px}.nav{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap}.nav a,.nav .cta{font-size:14px;padding:6px 8px;white-space:nowrap}.nav .long{display:none}.brand h1{font-size:26px}.brand .mark{width:36px;height:36px}}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.brand h1{font-size:28px;font-weight:900;font-stretch:80%}
+.brand h1{color:#fff;font-size:30px;font-weight:900;font-stretch:80%}
 .brand svg{flex:none}
-.engine{font-size:14px;color:#C8CCD1}
+
 
 /* hero */
 .hero{padding:40px 0 24px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px;align-items:center}
-@media (max-width:860px){.hero{grid-template-columns:1fr}.hero-art{max-width:420px}}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.hero-art{max-width:440px}}
+.hero-art svg.big-gryphon{filter:drop-shadow(0 14px 18px rgba(30,60,90,.18))}
 .hero-art{position:relative}
-.hero-art svg.big-gryphon{width:100%;height:auto;display:block;max-height:360px}
+.hero-art svg.big-gryphon{width:100%;height:auto;display:block;max-height:400px}
 .hot{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:14px 16px;margin-top:-8px;position:relative}
 .hot h3{font-size:22px;font-weight:800;margin-bottom:2px}
 .hot .sub{font-size:14px;color:var(--muted);margin:0 0 10px}
@@ -59,10 +69,10 @@ header .wrap{display:flex;align-items:center;justify-content:space-between;gap:1
 .hot .n{text-align:right;font-weight:700}
 .hot .none{font-size:15px;color:var(--muted);margin:0}
 @media (prefers-reduced-motion:no-preference){
-  #tagSwing{transform-origin:126px 168px;animation:swing 4s ease-in-out infinite}
+  #tagSwing{transform-origin:150px 175px;animation:swing 4s ease-in-out infinite}
   @keyframes swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
 }
-.brand .mark{width:34px;height:34px;flex:none}
+.brand .mark{width:42px;height:42px;flex:none}
 .hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
 .hero p{max-width:56ch;margin:14px 0 24px;color:var(--muted)}
 .choose{display:flex;gap:12px;flex-wrap:wrap}
@@ -115,6 +125,7 @@ textarea{min-height:84px;resize:vertical}
 .empty{background:var(--paper);border:3px dashed var(--muted);border-radius:6px;padding:28px;text-align:center}
 
 /* results: the one loud moment */
+#board,#results,#form{scroll-margin-top:90px}
 .results{display:none;margin:0 0 40px}
 .results.open{display:block}
 .results > h2{font-size:40px;font-weight:900;font-stretch:66%;margin-bottom:6px}
@@ -140,36 +151,25 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 </style>
 </head>
 <body>
-<!-- Original gryphon drawing (not the official Gryphons athletics mark), reused via <use>. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <g id="gryphon">
-      <path d="M292 330 C340 330 362 300 352 268 C346 250 330 252 334 266 C338 282 326 300 300 304 Z" fill="#000"/>
-      <path d="M352 268 C364 252 362 236 350 232 C356 246 348 256 340 260 Z" fill="#C20430"/>
-      <path d="M150 250 C150 210 190 190 235 196 C285 203 312 238 312 286 C312 330 290 350 250 352 L170 352 C150 352 140 340 142 322 C144 300 150 280 150 250 Z" fill="#000"/>
-      <path d="M240 300 C275 296 300 318 296 352 L258 352 C262 336 252 326 236 326 Z" fill="#262626"/>
-      <path d="M160 300 L166 352 L184 352 L180 300 Z" fill="#000"/>
-      <path d="M186 296 L196 352 L214 352 L206 294 Z" fill="#262626"/>
-      <path d="M160 352 l-6 8 h10 z M170 352 l-2 9 h8 z M190 352 l-6 8 h10 z M200 352 l-2 9 h8 z" fill="#FFC72A"/>
-      <path d="M225 206 C215 150 235 90 300 52 C292 82 300 96 318 92 C306 118 316 130 332 128 C318 150 326 164 342 166 C324 186 300 204 262 214 Z" fill="#C20430"/>
-      <path d="M245 200 C246 160 262 122 296 92 M258 206 C266 172 286 146 316 130 M272 210 C286 190 306 176 336 168" stroke="#8E0222" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path d="M150 262 C136 222 140 170 168 138 C186 118 216 116 232 132 C244 144 244 164 236 176 C228 190 222 206 226 226 C200 228 170 240 150 262 Z" fill="#000"/>
-      <path d="M156 214 q8 10 18 4 q8 10 18 2 M152 236 q8 10 18 4 q8 10 18 2 M174 196 q8 10 18 2" stroke="#3A3A3A" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <path d="M172 140 C150 136 128 144 116 162 C132 158 144 160 150 168 C152 180 146 186 140 190 C160 190 176 178 180 160 Z" fill="#FFC72A"/>
-      <path d="M150 168 C152 180 146 186 140 190" stroke="#B88A00" stroke-width="3" fill="none"/>
-      <circle cx="192" cy="146" r="9" fill="#FFC72A"/><circle cx="194" cy="146" r="4" fill="#000"/>
-      <path d="M178 132 L208 136" stroke="#FFC72A" stroke-width="4" stroke-linecap="round"/>
-      <path d="M220 128 L246 104 L238 138 Z" fill="#000"/>
-    </g>
-  </defs>
-</svg>
+<!-- Original faceted gryphon art (not the official Gryphons athletics mark).
+     Generated by tools/make_gryphon.py, loaded into this hidden holder at startup. -->
+<div id="gryphonDefs" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></div>
 <header>
-  <div class="wrap">
+  <div class="wrap bar">
     <a class="brand" href="/" aria-label="GryphFind home">
-      <svg class="mark" viewBox="104 82 150 150" aria-hidden="true"><defs><clipPath id="markClip"><circle cx="179" cy="157" r="75"/></clipPath></defs><circle cx="179" cy="157" r="75" fill="#FFC72A"/><g clip-path="url(#markClip)"><use href="#gryphon"/></g></svg>
+      <svg class="mark" viewBox="102 76 152 152" aria-hidden="true">
+        <defs><clipPath id="markClip"><circle cx="178" cy="152" r="68"/></clipPath></defs>
+        <circle cx="178" cy="152" r="75" fill="#C20430"/><circle cx="178" cy="152" r="68" fill="#FFC72A"/>
+        <g clip-path="url(#markClip)"><use href="#gNeck"/><use href="#gHead"/></g>
+      </svg>
       <h1>GryphFind</h1>
     </a>
-    <span class="engine" id="engine"></span>
+    <nav class="nav" aria-label="Main">
+      <a href="#board" data-go="found">Found<span class="long"> items</span></a>
+      <a href="#board" data-go="lost">Lost<span class="long"> items</span></a>
+      <button class="cta lost" data-report="lost">Report lost</button>
+      <button class="cta found" data-report="found">Report found</button>
+    </nav>
   </div>
 </header>
 
@@ -184,18 +184,20 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
       </div>
     </div>
     <div class="hero-art">
-      <svg class="big-gryphon" viewBox="40 40 340 330" role="img" aria-labelledby="gtitle">
+      <svg class="big-gryphon" viewBox="40 36 340 336" role="img" aria-labelledby="gtitle">
         <title id="gtitle">A gryphon carrying a claim tag</title>
-        <use href="#gryphon"/>
+        <use href="#gBody"/>
         <g id="tagSwing">
-          <path d="M126 168 C118 196 104 214 92 228" stroke="#000" stroke-width="2.5" fill="none"/>
-          <g transform="translate(44 226) rotate(-8)">
-            <path d="M14 0 H108 V62 H14 L0 48 V14 Z" fill="#F3E2AE" stroke="#D9C27E" stroke-width="2.5"/>
-            <circle cx="16" cy="31" r="5" fill="#E6F0F7" stroke="#D9C27E" stroke-width="2"/>
-            <text id="tagCount" x="64" y="34" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="26" fill="#000">0</text>
-            <text x="64" y="52" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="11" fill="#4A4F55">items waiting</text>
+          <path d="M150 175 C144 200 128 220 113 232" stroke="#5a4520" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <g transform="translate(112 240) rotate(8)">
+            <path d="M-38 -6 L-24 -20 H24 L38 -6 V74 H-38 Z" fill="#F3E2AE" stroke="#D9C27E" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle cx="0" cy="-8" r="5" fill="#E6F0F7" stroke="#D9C27E" stroke-width="2"/>
+            <text id="tagCount" x="0" y="32" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="28" fill="#000">0</text>
+            <text x="0" y="50" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="10" fill="#4A4F55">items</text>
+            <text x="0" y="62" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="10" fill="#4A4F55">waiting</text>
           </g>
         </g>
+        <use href="#gHead"/>
       </svg>
       <div class="hot">
         <h3>Where things go missing</h3>
@@ -265,7 +267,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 </main>
 
 <footer class="wrap">
-  Built at Hacktoberfest Hack Day Guelph. Open source under the MIT licence. Meet in a public place to hand items back.
+  <span id="engine"></span><br>Built at Hacktoberfest Hack Day Guelph. Open source under the MIT licence. Meet in a public place to hand items back.
 </footer>
 
 <script>
@@ -386,7 +388,18 @@ async function refresh() {
   $("#pins").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
 }
 
+// header nav
+function openForm(k){ document.querySelector(`.big[data-kind=${k}]`).click(); }
+document.querySelectorAll("[data-report]").forEach(b => b.addEventListener("click", () => openForm(b.dataset.report)));
+document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", e => {
+  e.preventDefault();
+  document.querySelector(`[data-tab=${a.dataset.go}]`).click();
+  document.querySelectorAll("[data-go]").forEach(x => x.setAttribute("aria-current", x === a));
+  $("#board").scrollIntoView({block: "start"});
+}));
+
 (async () => {
+  fetch("/static/gryphon.svg").then(r => r.text()).then(svg => { $("#gryphonDefs").innerHTML = svg; }).catch(() => {});
   const m = await api("/api/meta");
   $("#engine").textContent = `Matching with ${m.embedder === "clip" ? "CLIP (open weights)" : m.embedder} on ${m.backend === "snowflake" ? "Snowflake" : "SQLite"}`;
   $("#category").insertAdjacentHTML("beforeend", m.categories.map(c => `<option>${esc(c)}</option>`).join(""));
