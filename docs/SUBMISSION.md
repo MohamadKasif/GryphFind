@@ -10,7 +10,7 @@
 Lost stuff at Guelph ends up spread across the UC info desk, residence front desks, the library and random Instagram stories. Finding your water bottle means describing it over and over to different people. We wanted one board where a model does the comparing.
 
 ## What it does
-Finders post a photo. Owners post a photo or just a description like "blue Hydro Flask with a Gryphons sticker". GryphFind ranks the most likely matches with a confidence score, auto-tags the item type, explains in one line why it thinks the match is right, and lets the owner mark it reunited.
+Finders post a photo. Owners post a photo or just a description like "blue Hydro Flask with a Gryphons sticker". GryphFind ranks the most likely matches with a confidence score, auto-tags the item type, explains in one line why it thinks the match is right, and lets the owner claim it. Claimed items stay visible so a wrong claim can be put back, and a Previous matches history tracks every handoff. Posts live for 30 days; anything about to expire turns red, shows up in a red alert at the top, and can trigger browser notifications.
 
 ## How we built it
 - **Open-weight AI at the core:** OpenAI's CLIP (ViT-B/32, MIT-licensed weights) via Hugging Face transformers embeds both photos and text into one vector space. That's what makes text-to-photo matching work. CLIP zero-shot classification also auto-tags categories.
@@ -32,5 +32,6 @@ Verification questions so only the real owner can claim an item, automatic blurr
 2. Click **I lost something**. Type only "blue water bottle with stickers" (no photo). Post. The bottle comes up top: words matched to a photo.
 3. Click **I lost something** again and take a photo of a teammate's keys from a different angle. The keys match even though it's a different photo.
 4. Point out the stamped score, the "why" line from Llama, and the category CLIP picked.
-5. Hit **This is mine**. Show the reunited counter go up.
-6. If on Snowflake: switch to the worksheet and run the hotspot query and the Cortex board summary from `snowflake/setup.sql`.
+5. Hit **This is mine**. Show the item stays on the board marked Claimed, open **Previous matches** and tap **Wrong owner, put back**, then claim it again and tap **Handed over**.
+6. On any post tap **Demo: skip ahead**. The red "Leaving the board soon" alert appears and the tag turns red.
+7. If on Snowflake: switch to the worksheet and run the hotspot query and the Cortex board summary from `snowflake/setup.sql`.

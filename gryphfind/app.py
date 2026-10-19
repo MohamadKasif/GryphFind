@@ -11,12 +11,13 @@ from PIL import Image, ImageOps
 
 from .embedder import CATEGORIES, get_embedder
 from .explain import explain
-from .store import OPPOSITE, Post, get_store
+from .store import EXPIRY_DAYS, OPPOSITE, ClaimError, Post, get_store
 
 ROOT = Path(__file__).resolve().parent
 UPLOADS = Path(os.getenv("GRYPHFIND_UPLOADS", ROOT.parent / "uploads"))
 UPLOADS.mkdir(parents=True, exist_ok=True)
 EXPLAIN_TOP = int(os.getenv("EXPLAIN_TOP", "3"))
+DEMO = os.getenv("GRYPHFIND_DEMO", "1") == "1"  # shows the fast-forward button for judging
 
 app = Flask(__name__, static_folder=str(ROOT / "static"), static_url_path="/static")
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
@@ -54,7 +55,8 @@ def uploads(name):
 
 @app.get("/api/meta")
 def meta():
-    return jsonify(categories=CATEGORIES, backend=store.backend, embedder=emb.name)
+    return jsonify(categories=CATEGORIES, backend=store.backend, embedder=emb.name,
+                   expiry_days=EXPIRY_DAYS, demo=DEMO)
 
 
 @app.post("/api/posts")
@@ -109,16 +111,53 @@ def post_matches(pid):
     return jsonify(post=p.public(), matches=_with_explanations(p, store.matches(p)))
 
 
-@app.post("/api/posts/<pid>/resolve")
-def resolve(pid):
-    p = store.get(pid)
-    if not p:
-        abort(404)
-    store.resolve(pid)
-    other = (request.get_json(silent=True) or {}).get("match_id")
-    if other and store.get(other):
-        store.resolve(other)
+@app.get("/api/claims")
+def list_claims():
+    return jsonify(claims=store.claims(), pending=store.pending_claim_ids())
+
+
+@app.post("/api/claims")
+def make_claim():
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(claim=store.claim(body.get("a", ""), body.get("b", ""))), 201
+    except ClaimError as e:
+        abort(409, str(e))
+
+
+@app.post("/api/claims/<cid>/confirm")
+def confirm_claim(cid):
+    try:
+        store.confirm(cid)
+    except ClaimError as e:
+        abort(409, str(e))
     return jsonify(ok=True)
+
+
+@app.post("/api/claims/<cid>/reject")
+def reject_claim(cid):
+    try:
+        store.reject(cid)
+    except ClaimError as e:
+        abort(409, str(e))
+    return jsonify(ok=True)
+
+
+@app.get("/api/expiring")
+def expiring():
+    days = min(float(request.args.get("days", 3)), EXPIRY_DAYS)
+    return jsonify(posts=[p.public() for p in store.expiring(days)], days=days)
+
+
+@app.post("/api/demo/age/<pid>")
+def demo_age(pid):
+    if not DEMO:
+        abort(404)
+    if not store.get(pid):
+        abort(404)
+    days = float((request.get_json(silent=True) or {}).get("days", EXPIRY_DAYS - 2))
+    store.age(pid, max(0.0, min(days, 365.0)))
+    return jsonify(post=store.get(pid).public())
 
 
 @app.get("/api/stats")
@@ -128,6 +167,7 @@ def stats():
 
 @app.errorhandler(400)
 @app.errorhandler(404)
+@app.errorhandler(409)
 def err(e):
     return jsonify(error=getattr(e, "description", str(e))), e.code
 

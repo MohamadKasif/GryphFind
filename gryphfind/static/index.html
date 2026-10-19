@@ -40,13 +40,14 @@ header{background:var(--ink);color:var(--paper);border-bottom:6px solid var(--go
 header{position:sticky;top:0;z-index:10}
 header .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
 .nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav .short{display:none}
 .nav a{color:#fff;text-decoration:none;font-weight:700;padding:8px 12px;border-radius:4px}
 .nav a:hover,.nav a[aria-current=true]{background:#2A2A2A}
 .nav .cta{border:2px solid transparent;border-radius:4px;padding:7px 14px;font-weight:700;cursor:pointer}
 .nav .cta.lost{background:var(--red);color:#fff}
 .nav .cta.found{background:var(--gold);color:var(--ink)}
 .nav .cta:hover{border-color:#fff}
-@media (max-width:640px){header .bar{gap:6px;padding-top:8px;padding-bottom:8px}.nav{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap}.nav a,.nav .cta{font-size:14px;padding:6px 8px;white-space:nowrap}.nav .long{display:none}.brand h1{font-size:26px}.brand .mark{width:36px;height:36px}}
+@media (max-width:640px){.tabs button{padding:8px 10px;font-size:15px}header .bar{gap:6px;padding-top:8px;padding-bottom:8px}.nav{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap}.nav a,.nav .cta{font-size:14px;padding:6px 8px;white-space:nowrap}.nav .long{display:none}.nav .short{display:inline}.nav a,.nav .cta{font-size:13px;padding:6px 6px}.brand h1{font-size:26px}.brand .mark{width:36px;height:36px}}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .brand h1{color:#fff;font-size:30px;font-weight:900;font-stretch:80%}
 .brand svg{flex:none}
@@ -146,6 +147,52 @@ textarea{min-height:84px;resize:vertical}
 .actions button.yes{background:var(--ink);color:#fff}
 .reunited{font-weight:700;color:var(--red)}
 .back{background:none;border:0;text-decoration:underline;cursor:pointer;padding:0;margin-bottom:12px}
+
+/* countdowns + claimed */
+.left{display:inline-block;font-size:13px;font-weight:700;color:var(--muted);margin-top:2px}
+.left.urgent{background:var(--red);color:#fff;padding:1px 8px;border-radius:3px}
+.tag.urgent{border-color:var(--red);box-shadow:0 0 0 3px rgba(194,4,48,.25)}
+.flag{display:block;background:var(--ink);color:var(--gold);font-size:13px;font-weight:700;padding:3px 8px;border-radius:3px;margin:0 0 8px}
+.pin{display:flex;flex-direction:column}
+.pin .tag{flex:1}
+.pin-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pin-actions button,.hist-actions button,.alarm button{border:2px solid var(--ink);background:var(--paper);border-radius:4px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:14px}
+.pin-actions .putback,.hist-actions .putback{border-color:var(--red);color:var(--red)}
+.pin-actions .demo{border-style:dashed;color:var(--muted);border-color:var(--muted);font-weight:400}
+
+/* red alarm widget */
+.alarm{background:var(--red);color:#fff;border:3px solid #7A001B;border-radius:6px;padding:16px 18px;margin:20px 0 0}
+.alarm[hidden]{display:none}
+.alarm-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+@media (max-width:640px){.alarm h2{font-size:22px!important}}
+.alarm h2{font-size:28px;font-weight:900;display:flex;align-items:center;gap:10px}
+.alarm p{margin:4px 0 12px;max-width:62ch}
+.siren{width:14px;height:14px;border-radius:50%;background:#fff;flex:none;box-shadow:0 0 0 0 rgba(255,255,255,.8)}
+@media (prefers-reduced-motion:no-preference){.siren{animation:siren 1.4s ease-out infinite}@keyframes siren{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}100%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}}
+.alarm .notify{background:#fff;color:var(--red);border-color:#fff}
+.alarm .notify[disabled]{opacity:.8;cursor:default}
+.leaving{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.leaving button{all:unset;cursor:pointer;flex:0 0 220px;background:#fff;color:var(--ink);border-radius:4px;display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;padding:8px}
+.leaving button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.leaving img,.leaving .noimg{width:56px;height:56px;object-fit:cover;border-radius:3px;background:#F3E2AE}
+.leaving b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leaving small{color:var(--red);font-weight:700}
+
+/* previous matches */
+.hist{display:grid;gap:14px;padding-bottom:48px}
+.claim-row{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:14px;display:grid;grid-template-columns:1fr 1fr minmax(180px,.8fr);gap:14px;align-items:center}
+@media (max-width:760px){.claim-row{grid-template-columns:1fr}}
+.mini{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center}
+.mini img,.mini .noimg{width:64px;height:64px;object-fit:cover;border-radius:4px;background:#F3E2AE}
+.mini b{display:block}
+.mini span{font-size:14px;color:var(--muted)}
+.pill{display:inline-block;font-weight:700;font-size:14px;padding:2px 10px;border-radius:999px}
+.pill.pending{background:var(--gold)}
+.pill.confirmed{background:#1E7A3C;color:#fff}
+.pill.rejected{background:#E4E7EA}
+.hist-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.notice{font-weight:700}
+.notice.bad{color:var(--red)}
 footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.stamp.pop{animation:none}}
 </style>
@@ -167,13 +214,22 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
     <nav class="nav" aria-label="Main">
       <a href="#board" data-go="found">Found<span class="long"> items</span></a>
       <a href="#board" data-go="lost">Lost<span class="long"> items</span></a>
-      <button class="cta lost" data-report="lost">Report lost</button>
-      <button class="cta found" data-report="found">Report found</button>
+      <a href="#board" data-go="matches"><span class="long">Previous matches</span><span class="short">Matches</span></a>
+      <button class="cta lost" data-report="lost"><span class="long">Report lost</span><span class="short">I lost</span></button>
+      <button class="cta found" data-report="found"><span class="long">Report found</span><span class="short">I found</span></button>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
+  <section class="alarm" id="alarm" hidden aria-live="polite">
+    <div class="alarm-head">
+      <h2><span class="siren" aria-hidden="true"></span><span id="alarmTitle">Leaving the board soon</span></h2>
+      <button class="notify" id="notifyBtn" type="button">Alert me on this device</button>
+    </div>
+    <p id="alarmText"></p>
+    <div class="leaving" id="leaving"></div>
+  </section>
   <section class="hero" id="hero">
     <div>
       <h2>Lost it on campus? Someone probably found it.</h2>
@@ -259,6 +315,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
       <div class="tabs" role="tablist">
         <button role="tab" data-tab="found" aria-selected="true">Found items</button>
         <button role="tab" data-tab="lost" aria-selected="false">Lost items</button>
+        <button role="tab" data-tab="matches" aria-selected="false">Previous matches</button>
       </div>
     </div>
     <p class="stats" id="stats"></p>
@@ -273,7 +330,9 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let kind = null, tab = "found";
+let kind = null, tab = "found", meta = {demo: false, expiry_days: 30}, pending = {};
+const URGENT_DAYS = 3;
+const post_ = (path, body) => api(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -284,15 +343,29 @@ async function api(path, opts) {
 
 function ago(t){const s=(Date.now()/1000-t);if(s<3600)return Math.max(1,Math.round(s/60))+" min ago";if(s<86400)return Math.round(s/3600)+" h ago";return Math.round(s/86400)+" d ago";}
 
+function daysLabel(p) {
+  const d = p.days_left;
+  if (d <= URGENT_DAYS) return `<span class="left urgent">${d <= 0 ? "Deleted today" : `Deleted in ${d} day${d > 1 ? "s" : ""}`}</span>`;
+  return `<span class="left">${d} days left on the board</span>`;
+}
+
 function tagHTML(p, extra = "") {
-  return `<div class="tag">
+  const urgent = p.status !== "resolved" && p.days_left <= URGENT_DAYS;
+  return `<div class="tag ${urgent ? "urgent" : ""}">
+    ${p.status === "claimed" ? `<span class="flag">Claimed, waiting for handoff</span>` : ""}
     <span class="kind ${p.kind}">${p.kind === "lost" ? "Lost" : "Found"} · ${esc(p.category)}</span>
     ${p.image_url ? `<img class="photo" src="${esc(p.image_url)}" alt="${esc(p.title)}">` : ""}
     <h3>${esc(p.title)}</h3>
     ${p.description ? `<p>${esc(p.description)}</p>` : ""}
     <p class="meta">${p.location ? esc(p.location) + ", " : ""}${ago(p.created_at)}</p>
+    ${p.status !== "resolved" ? daysLabel(p) : ""}
     ${extra}
   </div>`;
+}
+
+function miniHTML(p) {
+  return `<div class="mini">${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<span class="noimg"></span>`}
+    <div><b>${esc(p.title)}</b><span>${p.kind === "lost" ? "Lost" : "Found"}${p.location ? ", " + esc(p.location) : ""}</span></div></div>`;
 }
 
 // mode buttons
@@ -357,13 +430,22 @@ function showResults({post, matches}) {
     const extra = `${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
       <p class="signals">${sig}</p>
       ${c.contact ? `<p><b>${c.kind === "found" ? "Pick up / contact" : "Owner"}:</b> ${esc(c.contact)}</p>` : ""}
-      <div class="actions"><button class="yes" data-a="${post.id}" data-b="${c.id}">${post.kind === "lost" ? "This is mine" : "This is theirs"}</button></div>`;
+      <div class="actions">${c.status === "claimed"
+        ? `<span class="notice">Someone already claimed this.</span> ${pending[c.id] ? `<button class="putback" data-claim="${pending[c.id]}">It's actually mine, put it back</button>` : ""}`
+        : `<button class="yes" data-a="${post.id}" data-b="${c.id}">${post.kind === "lost" ? "This is mine" : "This is theirs"}</button>`}</div>`;
     html += `<div class="pair">${i === 0 ? tagHTML(post) : "<div></div>"}${knot(m.score, i)}${tagHTML(c, extra)}</div>`;
   });
   r.innerHTML = html;
   r.querySelectorAll(".yes").forEach(b => b.addEventListener("click", async () => {
-    await api(`/api/posts/${b.dataset.a}/resolve`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({match_id: b.dataset.b})});
-    b.parentElement.innerHTML = `<span class="reunited">Marked as reunited. Both posts are off the board.</span>`;
+    try {
+      await post_("/api/claims", {a: b.dataset.a, b: b.dataset.b});
+      b.parentElement.innerHTML = `<span class="reunited">Claimed. Both posts stay on the board marked "claimed" so nobody else misses them. Once you have it, mark it handed over in Previous matches.</span>`;
+    } catch (err) { b.parentElement.innerHTML = `<span class="notice bad">${esc(err.message)}</span>`; }
+    refresh();
+  }));
+  r.querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => {
+    await post_(`/api/claims/${b.dataset.claim}/reject`);
+    b.parentElement.innerHTML = `<span class="reunited">Put back on the board. You can claim it now.</span>`;
     refresh();
   }));
   r.scrollIntoView({block: "start"});
@@ -375,24 +457,91 @@ document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click",
   tab = b.dataset.tab; document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b)); refresh();
 }));
 async function refresh() {
-  const [{posts}, st] = await Promise.all([api(`/api/posts?kind=${tab}`), api("/api/stats")]);
-  $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.reunited}</b> reunited.`;
+  const [st, cl, exp] = await Promise.all([api("/api/stats"), api("/api/claims"), api(`/api/expiring?days=${URGENT_DAYS}`)]);
+  pending = cl.pending || {};
+  $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.pending_claims}</b> waiting for handoff, <b>${st.reunited}</b> reunited. Posts stay up for ${Math.round(st.expiry_days)} days.`;
   $("#tagCount").textContent = st.open_found;
   const hs = st.by_location || [], max = Math.max(1, ...hs.map(h => h.n));
   $("#hotspots").innerHTML = hs.length
     ? hs.slice(0, 5).map(h => `<li><span>${esc(h.location)}</span><span class="bar"><i style="width:${Math.round(h.n / max * 100)}%"></i></span><span class="n">${h.n}</span></li>`).join("")
     : `<li class="none">Hotspots show up once items are posted.</li>`;
+  renderAlarm(exp.posts || []);
+  if (tab === "matches") return renderHistory(cl.claims || []);
+  const {posts} = await api(`/api/posts?kind=${tab}`);
+  $("#pins").className = "pins";
   $("#pins").innerHTML = posts.length
-    ? posts.map(p => `<button class="tag-btn" data-id="${p.id}" style="all:unset;cursor:pointer;display:block" aria-label="See matches for ${esc(p.title)}">${tagHTML(p)}</button>`).join("")
+    ? posts.map(p => `<article class="pin">${tagHTML(p, `<div class="pin-actions">
+        <button class="see" data-id="${p.id}">See matches</button>
+        ${p.status === "claimed" && pending[p.id] ? `<button class="putback" data-claim="${pending[p.id]}">Not theirs? Put it back</button>` : ""}
+        ${meta.demo && p.days_left > URGENT_DAYS ? `<button class="demo" data-age="${p.id}" title="Demo only: pretend this was posted ${Math.round(meta.expiry_days - 2)} days ago">Demo: skip ahead</button>` : ""}
+      </div>`)}</article>`).join("")
     : `<div class="empty">Nothing ${tab} yet. ${tab === "found" ? "Found something? Post it above." : "Lost something? Post it above."}</div>`;
-  $("#pins").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+  $("#pins").querySelectorAll(".see").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+  $("#pins").querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/reject`); refresh(); }));
+  $("#pins").querySelectorAll("[data-age]").forEach(b => b.addEventListener("click", async () => { await post_(`/api/demo/age/${b.dataset.age}`, {days: meta.expiry_days - 2}); refresh(); }));
 }
+
+const STATUS = {pending: "Waiting for handoff", confirmed: "Reunited", rejected: "Put back on the board"};
+function renderHistory(claims) {
+  $("#pins").className = "hist";
+  $("#pins").innerHTML = claims.length ? claims.map(c => `<article class="claim-row">
+      ${miniHTML(c.lost)}${miniHTML(c.found)}
+      <div><span class="pill ${c.status}">${STATUS[c.status]}</span>
+        <div class="meta">Claimed ${ago(c.created_at)}</div>
+        ${c.status === "pending" ? `<div class="hist-actions">
+          <button class="done" data-claim="${c.id}">Handed over</button>
+          <button class="putback" data-claim="${c.id}">Wrong owner, put back</button></div>` : ""}
+      </div></article>`).join("")
+    : `<div class="empty">No matches yet. When someone taps "This is mine", the pair shows up here until it's handed over.</div>`;
+  $("#pins").querySelectorAll(".done").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/confirm`); refresh(); }));
+  $("#pins").querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/reject`); refresh(); }));
+}
+
+// ---- red alarm + device notifications ----
+const notified = new Set((() => { try { return JSON.parse(sessionStorage.getItem("gf-notified") || "[]"); } catch { return []; } })());
+function renderAlarm(posts) {
+  const a = $("#alarm");
+  if (!posts.length) { a.hidden = true; return; }
+  a.hidden = false;
+  const n = posts.length;
+  $("#alarmTitle").textContent = `${n} item${n > 1 ? "s" : ""} leaving the board soon`;
+  $("#alarmText").textContent = `These get deleted in under ${URGENT_DAYS} days. If one is yours, or you know whose it is, act now.`;
+  $("#leaving").innerHTML = posts.map(p => `<button data-id="${p.id}">
+      ${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<span class="noimg"></span>`}
+      <span><b>${esc(p.title)}</b><small>${p.days_left <= 0 ? "Deleted today" : `${p.days_left} day${p.days_left > 1 ? "s" : ""} left`}</small></span></button>`).join("");
+  $("#leaving").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
+  notify(posts);
+}
+function notifyState() {
+  const b = $("#notifyBtn");
+  if (!("Notification" in window)) { b.hidden = true; return; }
+  if (Notification.permission === "granted") { b.textContent = "Alerts on for this device"; b.disabled = true; }
+  else if (Notification.permission === "denied") { b.textContent = "Alerts blocked in browser settings"; b.disabled = true; }
+}
+function notify(posts) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const fresh = posts.filter(p => !notified.has(p.id));
+  if (!fresh.length) return;
+  fresh.forEach(p => notified.add(p.id));
+  try { sessionStorage.setItem("gf-notified", JSON.stringify([...notified])); } catch {}
+  const first = fresh[0];
+  new Notification(`GryphFind: ${fresh.length} item${fresh.length > 1 ? "s" : ""} leaving soon`, {
+    body: `${first.title}${fresh.length > 1 ? ` and ${fresh.length - 1} more` : ""} will be deleted in under ${URGENT_DAYS} days.`,
+    tag: "gryphfind-expiring",
+  });
+}
+$("#notifyBtn").addEventListener("click", async () => {
+  await Notification.requestPermission(); notifyState(); refresh();
+});
+notifyState();
+setInterval(refresh, 60000);
 
 // header nav
 function openForm(k){ document.querySelector(`.big[data-kind=${k}]`).click(); }
 document.querySelectorAll("[data-report]").forEach(b => b.addEventListener("click", () => openForm(b.dataset.report)));
 document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", e => {
   e.preventDefault();
+  $("#results").classList.remove("open");
   document.querySelector(`[data-tab=${a.dataset.go}]`).click();
   document.querySelectorAll("[data-go]").forEach(x => x.setAttribute("aria-current", x === a));
   $("#board").scrollIntoView({block: "start"});
@@ -400,7 +549,7 @@ document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", 
 
 (async () => {
   fetch("/static/gryphon.svg").then(r => r.text()).then(svg => { $("#gryphonDefs").innerHTML = svg; }).catch(() => {});
-  const m = await api("/api/meta");
+  const m = await api("/api/meta"); meta = m;
   $("#engine").textContent = `Matching with ${m.embedder === "clip" ? "CLIP (open weights)" : m.embedder} on ${m.backend === "snowflake" ? "Snowflake" : "SQLite"}`;
   $("#category").insertAdjacentHTML("beforeend", m.categories.map(c => `<option>${esc(c)}</option>`).join(""));
   refresh();

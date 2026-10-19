@@ -15,7 +15,8 @@ Lost items at a university end up scattered across front desks, residence office
 3. **Calibrate.** Raw CLIP scores sit on different scales per signal (photo-to-text similarities top out around 0.3), so each one goes through its own logistic calibration before they're combined into a 0-100 match score ([`scoring.py`](gryphfind/scoring.py)).
 4. **Auto-tag.** CLIP zero-shot classification tags each photo as a category (phone, keys, water bottle…).
 5. **Explain.** The top matches get a one-line "why this might be yours" from an open-weight LLM: Llama 3.1 8B through Snowflake Cortex, or any local model through Ollama. With no LLM configured it falls back to a rule-based explanation.
-6. **Reunite.** "This is mine" marks both posts resolved and takes them off the board.
+6. **Claim, don't delete.** "This is mine" creates a *pending claim*. Both posts stay on the board marked "Claimed" so the real owner can still see them and tap **Not theirs? Put it back** if the claim was wrong. A put-back pair is never suggested again. Once the item changes hands, either side marks it **Handed over** and it moves to the **Previous matches** history.
+7. **30-day board.** Posts expire after 30 days (`EXPIRY_DAYS`). Anything with 3 days or less turns red, and a red "Leaving the board soon" alert lists those items at the top of the page. Visitors can turn on browser notifications to get alerted while the site is open.
 
 ```
 photo / text ──► CLIP (open weights) ──► vectors ──► SQLite + numpy
@@ -52,6 +53,11 @@ ollama pull llama3.2:3b
 OLLAMA_HOST=http://localhost:11434 python -m gryphfind
 ```
 
+### Settings
+
+- `EXPIRY_DAYS` (default 30): how long posts stay on the board.
+- `GRYPHFIND_DEMO` (default 1): shows a "Demo: skip ahead" button on each post so you can show the expiry alert to judges. Set to `0` for real use.
+
 ### Tune matching
 
 Take two photos of the same item and one of a different item, then:
@@ -81,7 +87,12 @@ EMBEDDER=stub python -m pytest tests
 | `POST` | `/api/posts` | Multipart: `kind` (lost/found), `title`, `description`, `location`, `contact`, `category`, `image`. Returns the post and its matches. |
 | `GET` | `/api/posts?kind=found` | Open posts on the board |
 | `GET` | `/api/posts/<id>/matches` | Re-run matching for a post |
-| `POST` | `/api/posts/<id>/resolve` | JSON `{"match_id": "..."}` marks both reunited |
+| `GET` | `/api/claims` | Claim history plus a map of posts with pending claims |
+| `POST` | `/api/claims` | JSON `{"a": id, "b": id}` claims a lost/found pair |
+| `POST` | `/api/claims/<id>/confirm` | Handed over: both posts resolved |
+| `POST` | `/api/claims/<id>/reject` | Wrong owner: both back on the board, pair never re-suggested |
+| `GET` | `/api/expiring?days=3` | Posts that will be deleted within N days |
+| `POST` | `/api/demo/age/<id>` | Demo only (`GRYPHFIND_DEMO=1`): pretend a post is older |
 | `GET` | `/api/stats` | Counts, top categories, top locations |
 
 ## Ideas for contributors
@@ -90,7 +101,8 @@ Issues tagged `hacktoberfest` and `good first issue` are a good place to start. 
 
 - Verification question: finders hide one detail, claimants must answer it
 - Blur faces and ID-card numbers in uploaded photos before saving
-- Email the lost-item poster when a new strong match is found
+- Email or web-push (service worker) alerts so expiry warnings reach people even when the site is closed
+- Accounts, so only the poster can confirm a handover
 - Store images in a Snowflake stage instead of local disk
 - Bulk import from a residence front desk's spreadsheet
 
