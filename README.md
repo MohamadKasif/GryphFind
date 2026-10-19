@@ -4,6 +4,13 @@ Campus lost & found that matches items for you. Post a photo of something you fo
 
 Built in one day at **Hacktoberfest Hack Day Guelph x GDG on Campus Guelph** (Oct 19, 2026).
 
+## Team
+
+Built in one day at Hacktoberfest Hack Day Guelph x GDG on Campus Guelph by:
+
+- **Mohamad Kasif** ([@MohamadKasif](https://github.com/MohamadKasif))
+- **Joshua Arunraj**
+
 ## Why
 
 Lost items at a university end up scattered across front desks, residence offices and Instagram stories. Searching means walking around and describing your water bottle to five different people. GryphFind puts everything on one board and lets a model do the comparing.

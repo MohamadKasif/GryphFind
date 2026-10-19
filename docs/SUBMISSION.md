@@ -6,6 +6,8 @@
 
 **Category:** Best Open-Source AI Project
 
+**Team:** Mohamad Kasif, Joshua Arunraj
+
 ## Inspiration
 Lost stuff at Guelph ends up spread across the UC info desk, residence front desks, the library and random Instagram stories. Finding your water bottle means describing it over and over to different people. We wanted one board where a model does the comparing.
 
