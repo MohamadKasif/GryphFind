@@ -118,8 +118,9 @@ img.mark{object-fit:contain;background:#fff;border-radius:50%;padding:3px;box-sh
 label{display:block;font-weight:700;margin:0 0 4px}
 .field{margin-bottom:14px}
 input[type=text],textarea,select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:4px;background:var(--paper)}
+input[type=text],select{height:50px;line-height:1.2}
 textarea{min-height:84px;resize:vertical}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 @media (max-width:520px){.row{grid-template-columns:1fr}}
 .hint{font-size:14px;color:var(--muted);margin:4px 0 0}
 .submit{background:var(--ink);color:#fff;border:0;padding:14px 22px;border-radius:4px;font-weight:700;cursor:pointer;font-size:18px}
@@ -537,7 +538,7 @@ function showResults({post, matches}) {
     <p>${good.length ? `${whose} is on the left, ${other} items on the right.` : `It's on the board now. When someone posts a ${other} item that looks like it, it will show up here.`}</p>`;
   if (!matches.length) html += `<div class="pair">${tagHTML(post)}</div>`;
   matches.forEach((m, i) => {
-    const s = m.signals, sig = [s.img_img!=null&&`photo vs photo ${s.img_img}`, s.cross!=null&&`words vs photo ${s.cross}`, s.txt_txt!=null&&`words vs words ${s.txt_txt}`].filter(Boolean).join(", ");
+    const s = m.signals, sig = [s.img_img!=null&&`photos look alike ${s.img_img}%`, s.sem!=null&&`descriptions mean the same ${s.sem}%`, s.cross!=null&&`description fits the photo ${s.cross}%`].filter(Boolean).join(", ");
     const c = m.post;
     const extra = `${c.kind === "found" ? reqBadge(c.id) : ""}${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
       <p class="signals">${sig}</p>

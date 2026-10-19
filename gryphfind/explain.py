@@ -26,8 +26,8 @@ def _template(q, c, score, signals) -> str:
         bits.append("the photos look alike")
     if signals.get("cross", 0) >= 60:
         bits.append("the photo fits the description")
-    if signals.get("txt_txt", 0) >= 60:
-        bits.append("the descriptions agree")
+    if signals.get("sem", signals.get("txt_txt", 0)) >= 60:
+        bits.append("the descriptions mean the same thing")
     if q.category and q.category == c.category:
         bits.append(f"both are tagged {q.category}")
     if q.location and c.location and q.location.lower() == c.location.lower():

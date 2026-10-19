@@ -14,6 +14,7 @@ Finders post a photo. Owners post a photo or just a description like "blue Hydro
 
 ## How we built it
 - **Open-weight AI at the core:** OpenAI's CLIP (ViT-B/32, MIT-licensed weights) via Hugging Face transformers embeds both photos and text into one vector space. That's what makes text-to-photo matching work. CLIP zero-shot classification also auto-tags categories.
+- **Second open-weight model for meaning:** all-MiniLM-L6-v2 compares what two descriptions mean, so "blue capsule, Daffy Duck design" still finds "blue container, Mickey Mouse print". Low scores are hidden so nobody sees unrelated junk.
 - **Calibrated scoring:** photo-photo, text-text and text-photo similarities live on very different scales, so each gets its own logistic calibration before combining into a 0-100 score.
 - **Snowflake:** posts and their 512-d CLIP vectors live in `VECTOR(FLOAT, 512)` columns. Matching runs in-warehouse with `VECTOR_COSINE_SIMILARITY`. `SNOWFLAKE.CORTEX.COMPLETE` with open-weight Llama 3.1 8B writes the match explanations and can summarise the board for campus staff. We also query lost-item hotspots by location.
 - **App:** Flask backend, a single dependency-free HTML page that works on phones with the camera, SQLite fallback so it runs with zero setup.

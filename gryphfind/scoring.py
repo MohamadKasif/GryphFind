@@ -9,14 +9,18 @@ Tune these with real photos at the event: `python -m gryphfind.calibrate`.
 from __future__ import annotations
 
 import math
+import os
 
 # (midpoint, temperature) per comparison type
 CALIBRATION = {
-    "img_img": (0.78, 0.04),
-    "txt_txt": (0.82, 0.04),
-    "cross": (0.255, 0.015),
+    "img_img": (0.78, 0.04),     # CLIP photo vs photo: same object ~0.85-0.95
+    "txt_txt": (0.82, 0.04),     # CLIP text vs text: crowded scale, kept as a minor signal
+    "cross": (0.235, 0.018),     # CLIP words vs photo: a good match ~0.27-0.33
+    "sem": (0.40, 0.07),         # MiniLM meaning: paraphrases ~0.5-0.8, unrelated ~0.0-0.25
 }
-WEIGHTS = {"img_img": 0.6, "txt_txt": 0.25, "cross": 0.15}
+WEIGHTS = {"img_img": 0.5, "sem": 0.3, "cross": 0.2, "txt_txt": 0.05}
+# Matches under this score are hidden instead of shown as junk.
+MIN_MATCH = int(os.getenv("MIN_MATCH", "40"))
 
 
 def _sig(x: float) -> float:
@@ -31,7 +35,7 @@ def calibrate(kind: str, sim: float | None) -> float | None:
 
 
 def combine(sims: dict[str, float | None]) -> tuple[int, dict[str, int]]:
-    """sims: {"img_img": s, "txt_txt": s, "cross": s} with None where unavailable.
+    """sims: {"img_img", "txt_txt", "cross", "sem"} -> raw similarity or None.
     Returns (overall score 0-100, per-signal breakdown 0-100)."""
     parts = {k: calibrate(k, v) for k, v in sims.items() if v is not None}
     if not parts:

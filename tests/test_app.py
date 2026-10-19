@@ -29,7 +29,7 @@ def test_flow():
     assert r.status_code == 201
     m = r.get_json()["matches"]
     assert m[0]["post"]["title"] == "Blue water bottle"
-    assert m[0]["score"] > m[1]["score"]
+    assert all(x["post"]["title"] != "Red umbrella" for x in m)  # unrelated items are hidden
     assert "why" in m[0]
     # text-only lost post still gets results
     r2 = post(c, kind="lost", title="red umbrella")

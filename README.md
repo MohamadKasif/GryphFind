@@ -11,8 +11,8 @@ Lost items at a university end up scattered across front desks, residence office
 ## How it works
 
 1. **Embed.** Every post is run through [CLIP](https://huggingface.co/openai/clip-vit-base-patch32) (open weights, MIT licence). Photos get an image embedding; titles and descriptions get a text embedding. CLIP puts both in the same 512-dimensional space.
-2. **Match.** A new "lost" post is compared with every open "found" post (and vice versa) on three signals: photo vs photo, words vs words, and words vs photo. That last one is what lets "blue Hydro Flask with a Gryphons sticker" find a photo someone else took.
-3. **Calibrate.** Raw CLIP scores sit on different scales per signal (photo-to-text similarities top out around 0.3), so each one goes through its own logistic calibration before they're combined into a 0-100 match score ([`scoring.py`](gryphfind/scoring.py)).
+2. **Match.** A new "lost" post is compared with every open "found" post (and vice versa) on three signals: photo vs photo (CLIP), description vs photo (CLIP), and what the two descriptions *mean* (a second open-weight model, [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), Apache-2.0, ~90 MB). CLIP is what lets "blue Hydro Flask with a Gryphons sticker" find someone else's photo; MiniLM is what knows "blue capsule" and "blue container" are close.
+3. **Calibrate and filter.** Raw CLIP scores sit on different scales per signal (photo-to-text similarities top out around 0.3), so each one goes through its own logistic calibration before they're combined into a 0-100 match score ([`scoring.py`](gryphfind/scoring.py)). Anything under `MIN_MATCH` (default 40) is hidden, so an Apple Pencil never shows up as a match for a lunch container.
 4. **Auto-tag.** CLIP zero-shot classification tags each photo as a category (phone, keys, water bottle…).
 5. **Explain.** The top matches get a one-line "why this might be yours" from an open-weight LLM: Llama 3.1 8B through Snowflake Cortex, or any local model through Ollama. With no LLM configured it falls back to a rule-based explanation.
 6. **The finder decides.** Every post gets a secret key that stays in the browser that made it (the server only stores a hash). The person who lost something taps **This is mine** and answers a private proof question; that sends a *claim request* to the finder. Several people can request the same item. Only the finder sees the proofs, in **My posts**, and only the finder can tap **Hand over to them** (every other request is declined) or **Not theirs**. Everyone else just sees statuses, and **Previous matches** is a read-only public record.
@@ -27,7 +27,7 @@ photo / text ──► CLIP (open weights) ──► vectors ──► SQLite + 
 
 ## Run it
 
-Needs Python 3.10+. The first run downloads CLIP (~600 MB).
+Needs Python 3.10+. The first run downloads CLIP (~600 MB) and MiniLM (~90 MB).
 
 ```bash
 git clone <this repo> && cd gryphfind
@@ -56,6 +56,7 @@ OLLAMA_HOST=http://localhost:11434 python -m gryphfind
 ### Settings
 
 - `EXPIRY_DAYS` (default 30): how long posts stay on the board.
+- `MIN_MATCH` (default 40): lowest score shown as a match.
 - `GRYPHFIND_DEMO` (default 1): shows a "Demo: skip ahead" button on each post so you can show the expiry alert to judges. Set to `0` for real use.
 
 ### Tune matching

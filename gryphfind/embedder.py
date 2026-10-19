@@ -104,3 +104,61 @@ def get_embedder():
     if _instance is None:
         _instance = StubEmbedder() if os.getenv("EMBEDDER", "clip") == "stub" else ClipEmbedder()
     return _instance
+
+
+class SemanticText:
+    """Sentence-meaning similarity for descriptions, using the open-weight
+    all-MiniLM-L6-v2 model (Apache-2.0, ~90 MB). CLIP's text side is tuned for
+    matching captions to photos, not for knowing that "capsule" and "container"
+    mean nearly the same thing; MiniLM is trained exactly for that.
+    Embeddings are cached per text. If the model can't load, matching still works
+    without it."""
+
+    name = "minilm"
+
+    def __init__(self, model_id: str | None = None):
+        import torch
+        from transformers import AutoModel, AutoTokenizer
+
+        self.torch = torch
+        mid = model_id or os.getenv("TEXT_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        self.tok = AutoTokenizer.from_pretrained(mid)
+        self.model = AutoModel.from_pretrained(mid).eval()
+        self._cache: dict[str, np.ndarray] = {}
+
+    def embed(self, text: str) -> np.ndarray:
+        text = (text or "").strip().lower()
+        if text in self._cache:
+            return self._cache[text]
+        enc = self.tok([text], padding=True, truncation=True, max_length=128, return_tensors="pt")
+        with self.torch.no_grad():
+            out = self.model(**enc).last_hidden_state
+        mask = enc["attention_mask"].unsqueeze(-1).float()
+        vec = _normalize(((out * mask).sum(1) / mask.sum(1))[0].numpy())
+        if len(self._cache) < 5000:
+            self._cache[text] = vec
+        return vec
+
+    def similarity(self, a: str, b: str) -> float | None:
+        if not (a or "").strip() or not (b or "").strip():
+            return None
+        return float(self.embed(a) @ self.embed(b))
+
+
+_sem = None
+_sem_failed = False
+
+
+def get_semantic():
+    """Returns the MiniLM helper, or None (stub mode, or the model couldn't load)."""
+    global _sem, _sem_failed
+    if os.getenv("EMBEDDER", "clip") == "stub" or _sem_failed:
+        return None
+    if _sem is None:
+        try:
+            _sem = SemanticText()
+        except Exception as e:  # offline, etc. -> fall back to CLIP-only scoring
+            print(f"[semantic] text model unavailable, using CLIP only: {e}")
+            _sem_failed = True
+            return None
+    return _sem

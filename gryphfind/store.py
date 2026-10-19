@@ -30,7 +30,8 @@ from dataclasses import asdict, dataclass, field
 import numpy as np
 
 from .embedder import DIM
-from .scoring import combine
+from .embedder import get_semantic
+from .scoring import MIN_MATCH, combine
 
 OPPOSITE = {"lost": "found", "found": "lost"}
 EXPIRY_DAYS = float(os.getenv("EXPIRY_DAYS", "30"))
@@ -79,7 +80,21 @@ def _sims(q: Post, c_img, c_txt) -> dict:
     }
 
 
+def _text(p) -> str:
+    return ". ".join(x for x in (p.title, p.description) if x)
+
+
+def _with_sem(sims: dict, q, c) -> dict:
+    """Add the MiniLM meaning score for the two descriptions, when available."""
+    sem = get_semantic()
+    if sem is not None:
+        sims["sem"] = sem.similarity(_text(q), _text(c))
+    return sims
+
+
 def _rank(rows, k):
+    """Best first, and only the ones worth showing."""
+    rows = [r for r in rows if r["score"] >= MIN_MATCH]
     rows.sort(key=lambda r: r["score"], reverse=True)
     return rows[:k]
 
@@ -309,7 +324,7 @@ class LocalStore(BaseStore):
         for c in self.list(OPPOSITE[p.kind]):
             if c.id in skip:
                 continue
-            score, parts = combine(_sims(p, c.img_vec, c.txt_vec))
+            score, parts = combine(_with_sem(_sims(p, c.img_vec, c.txt_vec), p, c))
             rows.append({"post": c.public(), "score": score, "signals": parts})
         return _rank(rows, k)
 
@@ -407,8 +422,9 @@ class SnowflakeStore(BaseStore):
                 continue
             cross = [x for x in (r["cross_a"], r["cross_b"]) if x is not None]
             sims = {"img_img": r["img_img"], "txt_txt": r["txt_txt"], "cross": max(cross) if cross else None}
-            score, parts = combine(sims)
-            rows.append({"post": self._row(r).public(), "score": score, "signals": parts})
+            cand = self._row(r)
+            score, parts = combine(_with_sem(sims, p, cand))
+            rows.append({"post": cand.public(), "score": score, "signals": parts})
         return _rank(rows, k)
 
     def complete(self, prompt: str, model: str | None = None) -> str:
