@@ -74,10 +74,11 @@ header .bar{display:flex;align-items:center;justify-content:space-between;gap:16
   @keyframes swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
 }
 .brand .mark{width:42px;height:42px;flex:none}
-img.mark{object-fit:contain;border-radius:4px}
+img.mark{object-fit:contain;background:#fff;border-radius:50%;padding:3px;box-shadow:0 0 0 2px var(--gold)}
 .mascot{position:relative}
+.mascot{padding-top:36px}
 .mascot img{width:100%;max-height:400px;object-fit:contain;display:block;filter:drop-shadow(0 14px 18px rgba(30,60,90,.18))}
-.mascot .count-tag{position:absolute;left:4%;bottom:6%;background:#F3E2AE;border:2.5px solid #D9C27E;border-radius:4px;padding:8px 14px;text-align:center;transform:rotate(-6deg)}
+.mascot .count-tag{position:absolute;left:0;top:0;background:#F3E2AE;border:2.5px solid #D9C27E;border-radius:4px;padding:8px 14px;text-align:center;transform:rotate(-6deg)}
 .mascot .count-tag b{display:block;font-family:Archivo,sans-serif;font-weight:900;font-size:30px;line-height:1}
 .mascot .count-tag span{font-size:13px;color:var(--muted)}
 .hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
