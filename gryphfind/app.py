@@ -53,10 +53,23 @@ def uploads(name):
     return send_from_directory(UPLOADS, name)
 
 
+BRAND = ROOT / "static" / "brand"
+
+
+def _brand_file(stem: str):
+    """Use an official logo/mascot image if the team dropped one into static/brand/."""
+    for ext in ("svg", "png", "webp", "jpg", "jpeg"):
+        f = BRAND / f"{stem}.{ext}"
+        if f.exists():
+            return f"/static/brand/{f.name}?v={int(f.stat().st_mtime)}"
+    return None
+
+
 @app.get("/api/meta")
 def meta():
     return jsonify(categories=CATEGORIES, backend=store.backend, embedder=emb.name,
-                   expiry_days=EXPIRY_DAYS, demo=DEMO)
+                   expiry_days=EXPIRY_DAYS, demo=DEMO,
+                   brand={"logo": _brand_file("logo"), "mascot": _brand_file("mascot")})
 
 
 @app.post("/api/posts")

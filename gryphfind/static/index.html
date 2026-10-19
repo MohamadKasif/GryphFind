@@ -68,12 +68,18 @@ header .bar{display:flex;align-items:center;justify-content:space-between;gap:16
 .hot .bar{height:10px;background:#EEF2F5;border-radius:5px;overflow:hidden}
 .hot .bar i{display:block;height:100%;background:var(--red);border-radius:5px}
 .hot .n{text-align:right;font-weight:700}
-.hot .none{font-size:15px;color:var(--muted);margin:0}
+.hot .none{display:block;font-size:15px;color:var(--muted);margin:0}
 @media (prefers-reduced-motion:no-preference){
   #tagSwing{transform-origin:150px 175px;animation:swing 4s ease-in-out infinite}
   @keyframes swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
 }
 .brand .mark{width:42px;height:42px;flex:none}
+img.mark{object-fit:contain;border-radius:4px}
+.mascot{position:relative}
+.mascot img{width:100%;max-height:400px;object-fit:contain;display:block;filter:drop-shadow(0 14px 18px rgba(30,60,90,.18))}
+.mascot .count-tag{position:absolute;left:4%;bottom:6%;background:#F3E2AE;border:2.5px solid #D9C27E;border-radius:4px;padding:8px 14px;text-align:center;transform:rotate(-6deg)}
+.mascot .count-tag b{display:block;font-family:Archivo,sans-serif;font-weight:900;font-size:30px;line-height:1}
+.mascot .count-tag span{font-size:13px;color:var(--muted)}
 .hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
 .hero p{max-width:56ch;margin:14px 0 24px;color:var(--muted)}
 .choose{display:flex;gap:12px;flex-wrap:wrap}
@@ -461,6 +467,7 @@ async function refresh() {
   pending = cl.pending || {};
   $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.pending_claims}</b> waiting for handoff, <b>${st.reunited}</b> reunited. Posts stay up for ${Math.round(st.expiry_days)} days.`;
   $("#tagCount").textContent = st.open_found;
+  const mt = $("#mascotCount"); if (mt) mt.textContent = st.open_found;
   const hs = st.by_location || [], max = Math.max(1, ...hs.map(h => h.n));
   $("#hotspots").innerHTML = hs.length
     ? hs.slice(0, 5).map(h => `<li><span>${esc(h.location)}</span><span class="bar"><i style="width:${Math.round(h.n / max * 100)}%"></i></span><span class="n">${h.n}</span></li>`).join("")
@@ -550,6 +557,16 @@ document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", 
 (async () => {
   fetch("/static/gryphon.svg").then(r => r.text()).then(svg => { $("#gryphonDefs").innerHTML = svg; }).catch(() => {});
   const m = await api("/api/meta"); meta = m;
+  // Official artwork dropped into static/brand/ replaces the built-in gryphon.
+  if (m.brand && m.brand.logo) {
+    const svg = document.querySelector(".brand .mark");
+    svg.outerHTML = `<img class="mark" src="${esc(m.brand.logo)}" alt="">`;
+  }
+  if (m.brand && m.brand.mascot) {
+    const art = document.querySelector(".big-gryphon");
+    art.outerHTML = `<div class="mascot"><img src="${esc(m.brand.mascot)}" alt="Guelph Gryphon">
+      <div class="count-tag"><b id="mascotCount">0</b><span>items waiting</span></div></div>`;
+  }
   $("#engine").textContent = `Matching with ${m.embedder === "clip" ? "CLIP (open weights)" : m.embedder} on ${m.backend === "snowflake" ? "Snowflake" : "SQLite"}`;
   $("#category").insertAdjacentHTML("beforeend", m.categories.map(c => `<option>${esc(c)}</option>`).join(""));
   refresh();
