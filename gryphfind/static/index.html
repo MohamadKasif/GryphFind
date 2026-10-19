@@ -200,6 +200,13 @@ textarea{min-height:84px;resize:vertical}
 .pill.rejected{background:#E4E7EA}
 .hist-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .notice{font-weight:700}
+.callout{background:var(--gold);border:3px solid var(--ink);border-radius:6px;padding:12px 14px;margin-top:10px}
+.callout strong{display:block;font-family:Archivo,sans-serif;font-stretch:80%;font-weight:900;font-size:20px;margin-bottom:2px}
+.callout p{margin:0 0 10px}
+.callout button{background:var(--ink);color:#fff;border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer}
+.hist-intro{background:var(--paper);border-left:6px solid var(--gold);padding:10px 14px;margin:0 0 4px;font-size:15px}
+.claim-row.flash{outline:4px solid var(--gold);outline-offset:3px}
+@media (prefers-reduced-motion:no-preference){.claim-row.flash{animation:flash 1.2s ease-in-out 3}@keyframes flash{50%{outline-color:var(--red)}}}
 .notice.bad{color:var(--red)}
 footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.stamp.pop{animation:none}}
@@ -446,8 +453,12 @@ function showResults({post, matches}) {
   r.innerHTML = html;
   r.querySelectorAll(".yes").forEach(b => b.addEventListener("click", async () => {
     try {
-      await post_("/api/claims", {a: b.dataset.a, b: b.dataset.b});
-      b.parentElement.innerHTML = `<span class="reunited">Claimed. Both posts stay on the board marked "claimed" so nobody else misses them. Once you have it, mark it handed over in Previous matches.</span>`;
+      const {claim} = await post_("/api/claims", {a: b.dataset.a, b: b.dataset.b});
+      b.parentElement.outerHTML = `<div class="callout" role="status">
+        <strong>Claimed. Next step: pick it up</strong>
+        <p>Both posts stay on the board with a "Claimed" badge, so the real owner can still spot them if this is a mix-up. After the handoff, open Previous matches and tap Handed over.</p>
+        <button type="button" class="go-matches" data-claim="${claim.id}">Go to Previous matches</button></div>`;
+      r.querySelectorAll(".go-matches").forEach(g => g.addEventListener("click", () => openMatches(g.dataset.claim)));
     } catch (err) { b.parentElement.innerHTML = `<span class="notice bad">${esc(err.message)}</span>`; }
     refresh();
   }));
@@ -468,8 +479,7 @@ async function refresh() {
   const [st, cl, exp] = await Promise.all([api("/api/stats"), api("/api/claims"), api(`/api/expiring?days=${URGENT_DAYS}`)]);
   pending = cl.pending || {};
   $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.pending_claims}</b> waiting for handoff, <b>${st.reunited}</b> reunited. Posts stay up for ${Math.round(st.expiry_days)} days.`;
-  $("#tagCount").textContent = st.open_found;
-  const mt = $("#mascotCount"); if (mt) mt.textContent = st.open_found;
+  for (const el of [$("#tagCount"), $("#mascotCount")]) if (el) el.textContent = st.open_found;
   const hs = st.by_location || [], max = Math.max(1, ...hs.map(h => h.n));
   $("#hotspots").innerHTML = hs.length
     ? hs.slice(0, 5).map(h => `<li><span>${esc(h.location)}</span><span class="bar"><i style="width:${Math.round(h.n / max * 100)}%"></i></span><span class="n">${h.n}</span></li>`).join("")
@@ -490,10 +500,23 @@ async function refresh() {
   $("#pins").querySelectorAll("[data-age]").forEach(b => b.addEventListener("click", async () => { await post_(`/api/demo/age/${b.dataset.age}`, {days: meta.expiry_days - 2}); refresh(); }));
 }
 
+let flashClaim = null;
+async function openMatches(claimId) {
+  flashClaim = claimId || null;
+  $("#results").classList.remove("open");
+  tab = "matches";
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === "matches"));
+  document.querySelectorAll("[data-go]").forEach(x => x.setAttribute("aria-current", x.dataset.go === "matches"));
+  await refresh();
+  const row = flashClaim && document.querySelector(`.claim-row[data-claim="${flashClaim}"]`);
+  (row || $("#board")).scrollIntoView({block: row ? "center" : "start"});
+}
+
 const STATUS = {pending: "Waiting for handoff", confirmed: "Reunited", rejected: "Put back on the board"};
 function renderHistory(claims) {
   $("#pins").className = "hist";
-  $("#pins").innerHTML = claims.length ? claims.map(c => `<article class="claim-row">
+  const intro = `<p class="hist-intro"><b>How this works:</b> every "This is mine" lands here. Tap <b>Handed over</b> once the item is back with its owner, or <b>Wrong owner, put back</b> if it was a mix-up and both posts go back on the board.</p>`;
+  $("#pins").innerHTML = claims.length ? intro + claims.map(c => `<article class="claim-row ${c.id === flashClaim ? "flash" : ""}" data-claim="${c.id}">
       ${miniHTML(c.lost)}${miniHTML(c.found)}
       <div><span class="pill ${c.status}">${STATUS[c.status]}</span>
         <div class="meta">Claimed ${ago(c.created_at)}</div>
