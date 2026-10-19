@@ -187,22 +187,22 @@ textarea{min-height:84px;resize:vertical}
 .pin-actions .demo{border-style:dashed;color:var(--muted);border-color:var(--muted);font-weight:400}
 
 /* red alarm widget */
-.alarm{background:var(--red);color:#fff;border:3px solid #7A001B;border-radius:6px;padding:16px 18px;margin:20px 0 0}
+.alarm{background:var(--red);color:#fff;border:2px solid #7A001B;border-radius:6px;padding:10px 14px;margin:14px 0 0}
 .alarm[hidden]{display:none}
 .alarm-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
-@media (max-width:640px){.alarm h2{font-size:22px!important}}
-.alarm h2{font-size:28px;font-weight:900;display:flex;align-items:center;gap:10px}
-.alarm p{margin:4px 0 12px;max-width:62ch}
-.siren{width:14px;height:14px;border-radius:50%;background:#fff;flex:none;box-shadow:0 0 0 0 rgba(255,255,255,.8)}
-@media (prefers-reduced-motion:no-preference){.siren{animation:siren 1.4s ease-out infinite}@keyframes siren{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}100%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}}
-.alarm .notify{background:#fff;color:var(--red);border-color:#fff}
+@media (max-width:640px){.alarm h2{font-size:18px!important}}
+.alarm h2{font-size:20px;font-weight:900;display:flex;align-items:center;gap:8px}
+.alarm p{margin:2px 0 8px;font-size:14px;max-width:70ch}
+.siren{width:10px;height:10px;border-radius:50%;background:#fff;flex:none;box-shadow:0 0 0 0 rgba(255,255,255,.8)}
+@media (prefers-reduced-motion:no-preference){.siren{animation:siren 1.4s ease-out infinite}@keyframes siren{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}100%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}}
+.alarm .notify{background:#fff;color:var(--red);border-color:#fff;font-size:13px;padding:4px 10px}
 .alarm .notify[disabled]{opacity:.8;cursor:default}
 .leaving{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
-.leaving button{all:unset;cursor:pointer;flex:0 0 220px;background:#fff;color:var(--ink);border-radius:4px;display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;padding:8px}
+.leaving button{all:unset;cursor:pointer;flex:0 0 190px;background:#fff;color:var(--ink);border-radius:4px;display:grid;grid-template-columns:36px 1fr;gap:8px;align-items:center;padding:5px 8px;font-size:14px}
 .leaving button:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.leaving img,.leaving .noimg{width:56px;height:56px;object-fit:cover;border-radius:3px;background:#F3E2AE}
+.leaving img,.leaving .noimg{width:36px;height:36px;object-fit:cover;border-radius:3px;background:#F3E2AE}
 .leaving b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.leaving small{color:var(--red);font-weight:700}
+.leaving small{display:block;color:var(--red);font-weight:700;font-size:12px}
 
 /* previous matches */
 .hist{display:grid;gap:14px;padding-bottom:48px}
