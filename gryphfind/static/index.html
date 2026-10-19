@@ -218,6 +218,10 @@ textarea{min-height:84px;resize:vertical}
 .pill.rejected{background:#E4E7EA}
 .hist-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .notice{font-weight:700}
+.secret-field{background:#FFF8DC;border:2px dashed #B8860B;border-radius:6px;padding:10px 12px}
+.private{display:inline-block;font-size:12px;font-weight:700;background:var(--ink);color:var(--gold);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+.proof.secret{border-left-color:var(--ink);background:#F3F4F6;margin-bottom:6px}
+.locked{font-size:14px;color:var(--muted);margin:6px 0 0}
 .callout{background:var(--gold);border:3px solid var(--ink);border-radius:6px;padding:12px 14px;margin-top:10px}
 .callout strong{display:block;font-family:Archivo,sans-serif;font-stretch:80%;font-weight:900;font-size:20px;margin-bottom:2px}
 .callout p{margin:0 0 10px}
@@ -347,6 +351,11 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
           <textarea id="description" name="description" maxlength="1000" placeholder="Dented at the bottom, Guelph Gryphons sticker, black lid"></textarea>
           <p class="hint" id="detailHint">Stickers, scratches, colours. The more specific, the better the match.</p>
         </div>
+        <div class="field secret-field" id="secretField" hidden>
+          <label for="secret">Secret detail <span class="private">Only you see this</span></label>
+          <input type="text" id="secret" name="secret" maxlength="300" placeholder="e.g. initials scratched under the lid, a sticker inside">
+          <p class="hint">Keep it out of the public details. When someone claims the item, you'll see it right next to their answer.</p>
+        </div>
         <div class="row">
           <div class="field">
             <label for="location" id="lblWhere">Where?</label>
@@ -459,6 +468,7 @@ function setMode(k, scroll = true) {
   $("#title").placeholder = m.ph; $("#contact").placeholder = m.contact;
   $("#dropTitle").textContent = m.drop; $("#detailHint").textContent = m.hint;
   $("#submit").textContent = m.submit;
+  $("#secretField").hidden = k !== "found";
   if (scroll) {
     f.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
     $("#title").focus({preventScroll: true});
@@ -542,7 +552,7 @@ function showResults({post, matches}) {
     const c = m.post;
     const extra = `${c.kind === "found" ? reqBadge(c.id) : ""}${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
       <p class="signals">${sig}</p>
-      ${c.contact ? `<p><b>${c.kind === "found" ? "Pick up / contact" : "Owner"}:</b> ${esc(c.contact)}</p>` : ""}
+      ${c.kind === "found" && c.has_contact ? `<p class="locked">Pickup details unlock once the finder hands it over to you.</p>` : ""}
       ${candidateActions(post, c)}`;
     html += `<div class="pair">${i === 0 ? tagHTML(post) : "<div></div>"}${knot(m.score, i)}${tagHTML(c, extra)}</div>`;
   });
@@ -601,12 +611,12 @@ async function refresh() {
         <div class="pin-actions">
         <button class="see" data-id="${p.id}">See matches</button>
         ${isMine(p.id) && requests[p.id] ? `<button class="review" type="button">Review requests</button>` : ""}
-        ${meta.demo && p.days_left > URGENT_DAYS ? `<button class="demo" data-age="${p.id}" title="Demo only: pretend this was posted ${Math.round(meta.expiry_days - 2)} days ago">Demo: skip ahead</button>` : ""}
+        ${meta.demo && isMine(p.id) && p.days_left > URGENT_DAYS ? `<button class="demo" data-age="${p.id}" title="Demo only: pretend this was posted ${Math.round(meta.expiry_days - 2)} days ago">Demo: skip ahead</button>` : ""}
       </div>`)}</article>`).join("")
     : `<div class="empty">Nothing ${tab} yet. ${tab === "found" ? "Found something? Post it above." : "Lost something? Post it above."}</div>`;
   $("#pins").querySelectorAll(".see").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
   $("#pins").querySelectorAll(".review").forEach(b => b.addEventListener("click", () => openTab("mine")));
-  $("#pins").querySelectorAll("[data-age]").forEach(b => b.addEventListener("click", async () => { await post_(`/api/demo/age/${b.dataset.age}`, {days: meta.expiry_days - 2}); refresh(); }));
+  $("#pins").querySelectorAll("[data-age]").forEach(b => b.addEventListener("click", async () => { await post_(`/api/demo/age/${b.dataset.age}`, {days: meta.expiry_days - 2, key: KEYS[b.dataset.age]}); refresh(); }));
 }
 
 let flashClaim = null;
@@ -635,7 +645,7 @@ async function renderMine() {
   }
   const {posts} = await post_("/api/mine", {keys: KEYS});
   if (!posts.length) { $("#pins").innerHTML = `<div class="empty">None of your posts are on the board any more.</div>`; return; }
-  $("#pins").innerHTML = posts.map(({post: p, requests: rq}) => {
+  $("#pins").innerHTML = posts.map(({post: p, requests: rq, secret}) => {
     const finder = p.kind === "found";
     const open = rq.filter(x => x.status === "pending").length;
     const head = `<div class="mine-head">${miniHTML(p)}
@@ -652,12 +662,14 @@ async function renderMine() {
         : `<p class="muted-note">No claim requests yet. When the owner finds your post, their request and proof appear here.</p>`;
       return `<article class="mine-card">${head}
         <h4>Claim requests${open ? ` (${open} waiting)` : ""}</h4>
-        ${open ? `<p class="muted-note">Compare each answer with the detail you kept out of your post. Only you can hand this item over.</p>` : ""}
+        ${secret ? `<p class="proof secret"><b>Your secret detail</b>${esc(secret)}</p>` : ""}
+        ${open ? `<p class="muted-note">Compare each answer with ${secret ? "your secret detail" : "the detail you kept out of your post"}. Only you can hand this item over.</p>` : ""}
         ${body}</article>`;
     }
     const body = rq.length ? rq.map(x => `<div class="req ${x.id === flashClaim ? "flash" : ""}" data-claim="${x.id}">
         ${miniHTML(x.other)}
-        <div>${x.other.contact ? `<p class="muted-note">Pick up / contact: ${esc(x.other.contact)}</p>` : ""}</div>
+        <div>${x.status === "confirmed" && x.other.contact ? `<p class="muted-note"><b>Pick up / contact:</b> ${esc(x.other.contact)}</p>`
+          : x.status === "pending" ? `<p class="locked">Pickup details unlock once the finder hands it over to you.</p>` : ""}</div>
         <div><span class="pill ${x.status}">${MINE_STATUS.lost[x.status] || x.status}</span></div></div>`).join("")
       : `<p class="muted-note">You haven't claimed anything yet. Open See matches on your post and tap This is mine.</p>`;
     return `<article class="mine-card">${head}<h4>Your claim requests</h4>${body}</article>`;

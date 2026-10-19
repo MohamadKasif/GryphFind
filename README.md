@@ -16,6 +16,9 @@ Lost items at a university end up scattered across front desks, residence office
 4. **Auto-tag.** CLIP zero-shot classification tags each photo as a category (phone, keys, water bottle…).
 5. **Explain.** The top matches get a one-line "why this might be yours" from an open-weight LLM: Llama 3.1 8B through Snowflake Cortex, or any local model through Ollama. With no LLM configured it falls back to a rule-based explanation.
 6. **The finder decides.** Every post gets a secret key that stays in the browser that made it (the server only stores a hash). The person who lost something taps **This is mine** and answers a private proof question; that sends a *claim request* to the finder. Several people can request the same item. Only the finder sees the proofs, in **My posts**, and only the finder can tap **Hand over to them** (every other request is declined) or **Not theirs**. Everyone else just sees statuses, and **Previous matches** is a read-only public record.
+   - **Contacts stay private.** Nobody browsing sees a phone number or pickup spot. The finder sees each claimant's contact; the owner sees the pickup details only after the finder hands it over.
+   - **Secret detail.** Finders can note something private about the item ("initials under the lid"); it's shown only to them, next to each claimant's proof.
+   - The demo fast-forward button only works on your own posts.
 7. **30-day board.** Posts expire after 30 days (`EXPIRY_DAYS`). Anything with 3 days or less turns red, and a red "Leaving the board soon" alert lists those items at the top of the page. Visitors can turn on browser notifications to get alerted while the site is open.
 
 ```

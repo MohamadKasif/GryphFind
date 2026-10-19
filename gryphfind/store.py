@@ -58,9 +58,15 @@ class Post:
     img_vec: np.ndarray | None = None
     txt_vec: np.ndarray | None = None
 
-    def public(self) -> dict:
+    def public(self, include_contact: bool = False) -> dict:
+        """Safe-to-share view. Contact details are left out unless the viewer has
+        earned them (the post's owner, a finder reviewing a claim, or an owner
+        the finder has handed the item over to)."""
         d = asdict(self)
         d.pop("img_vec"), d.pop("txt_vec")
+        if not include_contact:
+            d["contact"] = ""
+        d["has_contact"] = bool(self.contact)
         d["image_url"] = f"/uploads/{self.image_path}" if self.image_path else None
         expires = self.created_at + EXPIRY_DAYS * DAY
         d["expires_at"] = expires
@@ -163,6 +169,15 @@ class BaseStore:
         rows = self._q(f"SELECT key_hash FROM post_keys WHERE post_id={self.P}", (pid,))
         return bool(rows) and hmac.compare_digest(rows[0]["key_hash"], self._hash(key))
 
+    def set_secret(self, pid: str, secret: str) -> None:
+        secret = (secret or "").strip()[:300]
+        if secret:
+            self._x(f"INSERT INTO post_secrets (post_id, secret) VALUES ({self._ph(2)})", (pid, secret))
+
+    def secret(self, pid: str) -> str:
+        rows = self._q(f"SELECT secret FROM post_secrets WHERE post_id={self.P}", (pid,))
+        return rows[0]["secret"] if rows else ""
+
     # ---- claims ----
     def _claim(self, cid: str) -> dict:
         rows = self._q(f"SELECT * FROM claims WHERE id={self.P}", (cid,))
@@ -244,12 +259,18 @@ class BaseStore:
                 other = self.get(c["lost_id"] if p.kind == "found" else c["found_id"])
                 if not other:
                     continue
-                r = {"id": c["id"], "status": c["status"], "created_at": c["created_at"], "other": other.public()}
+                # finders see who is asking; requesters see pickup details only once handed over
+                show = p.kind == "found" or c["status"] == "confirmed"
+                r = {"id": c["id"], "status": c["status"], "created_at": c["created_at"],
+                     "other": other.public(include_contact=show)}
                 if p.kind == "found":
                     pr = self._q(f"SELECT proof FROM claim_proofs WHERE claim_id={self.P}", (c["id"],))
                     r["proof"] = pr[0]["proof"] if pr else ""
                 reqs.append(r)
-            out.append({"post": p.public(), "requests": reqs})
+            item = {"post": p.public(include_contact=True), "requests": reqs}
+            if p.kind == "found":
+                item["secret"] = self.secret(p.id)
+            out.append(item)
         out.sort(key=lambda x: x["post"]["created_at"], reverse=True)
         return out
 
@@ -288,6 +309,7 @@ class LocalStore(BaseStore):
                 id TEXT PRIMARY KEY, lost_id TEXT, found_id TEXT,
                 created_at REAL, updated_at REAL, status TEXT);
                CREATE TABLE IF NOT EXISTS post_keys (post_id TEXT PRIMARY KEY, key_hash TEXT);
+               CREATE TABLE IF NOT EXISTS post_secrets (post_id TEXT PRIMARY KEY, secret TEXT);
                CREATE TABLE IF NOT EXISTS claim_proofs (claim_id TEXT PRIMARY KEY, proof TEXT);"""
         )
         self.db.commit()
@@ -359,6 +381,7 @@ class SnowflakeStore(BaseStore):
                 ID STRING PRIMARY KEY, LOST_ID STRING, FOUND_ID STRING,
                 CREATED_AT FLOAT, UPDATED_AT FLOAT, STATUS STRING)""", ())
         self._x("CREATE TABLE IF NOT EXISTS POST_KEYS (POST_ID STRING PRIMARY KEY, KEY_HASH STRING)", ())
+        self._x("CREATE TABLE IF NOT EXISTS POST_SECRETS (POST_ID STRING PRIMARY KEY, SECRET STRING)", ())
         self._x("CREATE TABLE IF NOT EXISTS CLAIM_PROOFS (CLAIM_ID STRING PRIMARY KEY, PROOF STRING)", ())
 
     def _cur(self):

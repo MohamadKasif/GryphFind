@@ -108,7 +108,9 @@ def create_post():
 
     store.add(p)
     key = store.new_key(p.id)  # only this browser gets it; we keep a hash
-    return jsonify(post=p.public(), key=key, matches=_with_explanations(p, store.matches(p))), 201
+    if kind == "found":
+        store.set_secret(p.id, f.get("secret", ""))  # private: only the finder ever sees it
+    return jsonify(post=p.public(include_contact=True), key=key, matches=_with_explanations(p, store.matches(p))), 201
 
 
 @app.get("/api/posts")
@@ -185,7 +187,10 @@ def demo_age(pid):
         abort(404)
     if not store.get(pid):
         abort(404)
-    days = float((request.get_json(silent=True) or {}).get("days", EXPIRY_DAYS - 2))
+    body = request.get_json(silent=True) or {}
+    if not store.owns(pid, str(body.get("key", ""))):
+        abort(403, "You can only fast-forward your own posts.")
+    days = float(body.get("days", EXPIRY_DAYS - 2))
     store.age(pid, max(0.0, min(days, 365.0)))
     return jsonify(post=store.get(pid).public())
 

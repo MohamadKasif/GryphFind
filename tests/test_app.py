@@ -22,7 +22,7 @@ def test_flow():
     c = app.test_client()
     assert c.get("/").status_code == 200
     for title, color in (("Blue water bottle", (20, 40, 200)), ("Red umbrella", (200, 20, 20))):
-        res = post(c, kind="found", title=title, image=img(color))
+        res = post(c, kind="found", title=title, image=img(color), contact="UC front desk", secret=f"{title} secret")
         assert res.status_code == 201 and res.get_json()["key"]
         FOUND_KEYS[title] = res.get_json()["key"]
     r = post(c, kind="lost", title="blue water bottle", image=img((25, 45, 205)))
@@ -34,6 +34,10 @@ def test_flow():
     # text-only lost post still gets results
     r2 = post(c, kind="lost", title="red umbrella")
     assert r2.get_json()["matches"][0]["post"]["title"] == "Red umbrella"
+    # --- privacy: nobody browsing sees contacts ---------------------------
+    board = c.get("/api/posts?kind=found").get_json()["posts"]
+    assert board and all(p["contact"] == "" and p["has_contact"] for p in board)
+    assert "UC front desk" not in str(c.get(f"/api/posts/{board[0]['id']}/matches").get_json())
     # --- roles ---------------------------------------------------------
     finder_key = None
     found_posts = c.get("/api/posts?kind=found").get_json()["posts"]
@@ -63,12 +67,18 @@ def test_flow():
     finder_key = FOUND_KEYS["Blue water bottle"]
     inbox = c.post("/api/mine", json={"keys": {found_id: finder_key}}).get_json()["posts"]
     assert len(inbox) == 1 and len(inbox[0]["requests"]) == 2
+    assert inbox[0]["secret"] == "Blue water bottle secret"           # finder sees their own secret
+    assert inbox[0]["post"]["contact"] == "UC front desk"             # and their own contact
     assert {q["proof"] for q in inbox[0]["requests"]} == {"Gryphons sticker under the lid", "it's blue"}
     # the lost person sees status only, no proofs of others
     mine = c.post("/api/mine", json={"keys": {lost_id: lost_key}}).get_json()["posts"]
     assert mine[0]["requests"][0]["status"] == "pending" and "proof" not in mine[0]["requests"][0]
+    assert mine[0]["requests"][0]["other"]["contact"] == ""            # no pickup details before handover
+    assert "secret" not in str(mine)
     # finder hands it to the right person -> the other request is declined automatically
     assert c.post(f"/api/claims/{good_cid}/hand-over", json={"key": finder_key}).status_code == 200
+    mine = c.post("/api/mine", json={"keys": {lost_id: lost_key}}).get_json()["posts"]
+    assert mine[0]["requests"][0]["other"]["contact"] == "UC front desk"  # revealed after handover
     statuses = {h["id"]: h["status"] for h in c.get("/api/claims").get_json()["claims"]}
     assert statuses[good_cid] == "confirmed" and statuses[bad_cid] == "declined"
     assert all(p["id"] != found_id for p in c.get("/api/posts?kind=found").get_json()["posts"])
@@ -78,10 +88,12 @@ def test_flow():
     # expiry: age the umbrella to 28 days -> expiring soon; to 31 -> gone
     umb = [p for p in c.get("/api/posts?kind=found").get_json()["posts"] if p["title"] == "Red umbrella"][0]
     assert umb["days_left"] == 30
-    assert c.post(f"/api/demo/age/{umb['id']}", json={"days": 28}).get_json()["post"]["days_left"] == 2
+    assert c.post(f"/api/demo/age/{umb['id']}", json={"days": 28}).status_code == 403  # not your post
+    uk = FOUND_KEYS["Red umbrella"]
+    assert c.post(f"/api/demo/age/{umb['id']}", json={"days": 28, "key": uk}).get_json()["post"]["days_left"] == 2
     assert [p["id"] for p in c.get("/api/expiring").get_json()["posts"]] == [umb["id"]]
     assert c.get("/api/stats").get_json()["expiring_soon"] == 1
-    c.post(f"/api/demo/age/{umb['id']}", json={"days": 3})
+    c.post(f"/api/demo/age/{umb['id']}", json={"days": 3, "key": uk})
     assert c.get("/api/posts?kind=found").get_json()["posts"] == []
     assert c.get(f"/api/posts/{found_id}/matches").status_code == 200
     assert c.get("/api/posts/nope/matches").status_code == 404
