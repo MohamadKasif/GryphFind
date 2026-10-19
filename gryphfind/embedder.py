@@ -48,17 +48,25 @@ class ClipEmbedder:
         self.processor = CLIPProcessor.from_pretrained(self.model_id)
         self._cat_vecs = np.stack([self.embed_text(f"a photo of a {c}") for c in CATEGORIES])
 
+    # We call CLIP's vision/text towers and projection layers directly instead of
+    # get_image_features/get_text_features, whose return type changed between
+    # transformers 4.x (tensor) and 5.x (output object). The towers' pooler_output
+    # plus the projection is exactly what CLIP uses internally in every version.
     def embed_image(self, img: Image.Image) -> np.ndarray:
         inputs = self.processor(images=img.convert("RGB"), return_tensors="pt").to(self.device)
         with self.torch.no_grad():
-            feats = self.model.get_image_features(**inputs)
-        return _normalize(feats[0].cpu().numpy())
+            pooled = self.model.vision_model(pixel_values=inputs["pixel_values"]).pooler_output
+            vec = self.model.visual_projection(pooled)
+        return _normalize(vec[0].float().cpu().numpy())
 
     def embed_text(self, text: str) -> np.ndarray:
         inputs = self.processor(text=[text], return_tensors="pt", padding=True, truncation=True).to(self.device)
         with self.torch.no_grad():
-            feats = self.model.get_text_features(**inputs)
-        return _normalize(feats[0].cpu().numpy())
+            pooled = self.model.text_model(
+                input_ids=inputs["input_ids"], attention_mask=inputs.get("attention_mask")
+            ).pooler_output
+            vec = self.model.text_projection(pooled)
+        return _normalize(vec[0].float().cpu().numpy())
 
     def classify(self, img_vec: np.ndarray) -> str:
         sims = self._cat_vecs @ img_vec
