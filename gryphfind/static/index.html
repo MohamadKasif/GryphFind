@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 :root{
-  --wall:#D9DEE3;       /* painted cinderblock */
-  --wall-line:#C9CFD6;
+  --wall:#E6F0F7;       /* soft sky the gryphon flies in */
+  --wall-line:#D3E2EE;
   --tag:#F3E2AE;        /* manila claim tag */
   --tag-edge:#D9C27E;
   --ink:#000;
@@ -24,10 +24,10 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;color:var(--ink);font:400 17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;
   background-color:var(--wall);
   background-image:
-    linear-gradient(var(--wall-line) 2px,transparent 2px),
-    linear-gradient(90deg,var(--wall-line) 2px,transparent 2px);
-  background-size:120px 60px,240px 60px;
-  background-position:0 0, 0 0;
+    radial-gradient(ellipse 60% 40% at 85% 10%, #FFFFFF 0%, rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 40% 25% at 10% 60%, rgba(255,255,255,.7) 0%, rgba(255,255,255,0) 70%),
+    linear-gradient(180deg,#D7E7F3 0%,var(--wall) 600px);
+  background-repeat:no-repeat;
 }
 h1,h2,h3{font-family:Archivo,sans-serif;font-stretch:72%;line-height:1.05;margin:0}
 a{color:inherit}
@@ -44,7 +44,25 @@ header .wrap{display:flex;align-items:center;justify-content:space-between;gap:1
 .engine{font-size:14px;color:#C8CCD1}
 
 /* hero */
-.hero{padding:40px 0 24px}
+.hero{padding:40px 0 24px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px;align-items:center}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.hero-art{max-width:420px}}
+.hero-art{position:relative}
+.hero-art svg.big-gryphon{width:100%;height:auto;display:block;max-height:360px}
+.hot{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:14px 16px;margin-top:-8px;position:relative}
+.hot h3{font-size:22px;font-weight:800;margin-bottom:2px}
+.hot .sub{font-size:14px;color:var(--muted);margin:0 0 10px}
+.hot ol{list-style:none;margin:0;padding:0}
+.hot li{display:grid;grid-template-columns:minmax(0,9rem) 1fr 2ch;gap:10px;align-items:center;font-size:15px;margin:6px 0}
+.hot li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hot .bar{height:10px;background:#EEF2F5;border-radius:5px;overflow:hidden}
+.hot .bar i{display:block;height:100%;background:var(--red);border-radius:5px}
+.hot .n{text-align:right;font-weight:700}
+.hot .none{font-size:15px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:no-preference){
+  #tagSwing{transform-origin:126px 168px;animation:swing 4s ease-in-out infinite}
+  @keyframes swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+}
+.brand .mark{width:34px;height:34px;flex:none}
 .hero h2{font-size:clamp(40px,7vw,76px);font-weight:900;font-stretch:62%;max-width:14ch}
 .hero p{max-width:56ch;margin:14px 0 24px;color:var(--muted)}
 .choose{display:flex;gap:12px;flex-wrap:wrap}
@@ -122,10 +140,33 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 </style>
 </head>
 <body>
+<!-- Original gryphon drawing (not the official Gryphons athletics mark), reused via <use>. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="gryphon">
+      <path d="M292 330 C340 330 362 300 352 268 C346 250 330 252 334 266 C338 282 326 300 300 304 Z" fill="#000"/>
+      <path d="M352 268 C364 252 362 236 350 232 C356 246 348 256 340 260 Z" fill="#C20430"/>
+      <path d="M150 250 C150 210 190 190 235 196 C285 203 312 238 312 286 C312 330 290 350 250 352 L170 352 C150 352 140 340 142 322 C144 300 150 280 150 250 Z" fill="#000"/>
+      <path d="M240 300 C275 296 300 318 296 352 L258 352 C262 336 252 326 236 326 Z" fill="#262626"/>
+      <path d="M160 300 L166 352 L184 352 L180 300 Z" fill="#000"/>
+      <path d="M186 296 L196 352 L214 352 L206 294 Z" fill="#262626"/>
+      <path d="M160 352 l-6 8 h10 z M170 352 l-2 9 h8 z M190 352 l-6 8 h10 z M200 352 l-2 9 h8 z" fill="#FFC72A"/>
+      <path d="M225 206 C215 150 235 90 300 52 C292 82 300 96 318 92 C306 118 316 130 332 128 C318 150 326 164 342 166 C324 186 300 204 262 214 Z" fill="#C20430"/>
+      <path d="M245 200 C246 160 262 122 296 92 M258 206 C266 172 286 146 316 130 M272 210 C286 190 306 176 336 168" stroke="#8E0222" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M150 262 C136 222 140 170 168 138 C186 118 216 116 232 132 C244 144 244 164 236 176 C228 190 222 206 226 226 C200 228 170 240 150 262 Z" fill="#000"/>
+      <path d="M156 214 q8 10 18 4 q8 10 18 2 M152 236 q8 10 18 4 q8 10 18 2 M174 196 q8 10 18 2" stroke="#3A3A3A" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M172 140 C150 136 128 144 116 162 C132 158 144 160 150 168 C152 180 146 186 140 190 C160 190 176 178 180 160 Z" fill="#FFC72A"/>
+      <path d="M150 168 C152 180 146 186 140 190" stroke="#B88A00" stroke-width="3" fill="none"/>
+      <circle cx="192" cy="146" r="9" fill="#FFC72A"/><circle cx="194" cy="146" r="4" fill="#000"/>
+      <path d="M178 132 L208 136" stroke="#FFC72A" stroke-width="4" stroke-linecap="round"/>
+      <path d="M220 128 L246 104 L238 138 Z" fill="#000"/>
+    </g>
+  </defs>
+</svg>
 <header>
   <div class="wrap">
     <a class="brand" href="/" aria-label="GryphFind home">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M6 2h18l4 4v22H6l-4-4V6z" fill="#F3E2AE"/><circle cx="9" cy="15" r="3" fill="#000"/><path d="M14 9h10M14 15h10M14 21h7" stroke="#C20430" stroke-width="3"/></svg>
+      <svg class="mark" viewBox="104 82 150 150" aria-hidden="true"><defs><clipPath id="markClip"><circle cx="179" cy="157" r="75"/></clipPath></defs><circle cx="179" cy="157" r="75" fill="#FFC72A"/><g clip-path="url(#markClip)"><use href="#gryphon"/></g></svg>
       <h1>GryphFind</h1>
     </a>
     <span class="engine" id="engine"></span>
@@ -134,11 +175,33 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 
 <main class="wrap">
   <section class="hero" id="hero">
-    <h2>Lost it on campus? Someone probably found it.</h2>
-    <p>Post a photo or a description. An open-source image model compares it with every item on the other side of the board and shows you the most likely matches.</p>
-    <div class="choose" role="group" aria-label="What happened?">
-      <button class="big lost" data-kind="lost" aria-pressed="false">I lost something</button>
-      <button class="big found" data-kind="found" aria-pressed="false">I found something</button>
+    <div>
+      <h2>Lost it on campus? Someone probably found it.</h2>
+      <p>Post a photo or a description. An open-source image model compares it with every item on the other side of the board and shows you the most likely matches.</p>
+      <div class="choose" role="group" aria-label="What happened?">
+        <button class="big lost" data-kind="lost" aria-pressed="false">I lost something</button>
+        <button class="big found" data-kind="found" aria-pressed="false">I found something</button>
+      </div>
+    </div>
+    <div class="hero-art">
+      <svg class="big-gryphon" viewBox="40 40 340 330" role="img" aria-labelledby="gtitle">
+        <title id="gtitle">A gryphon carrying a claim tag</title>
+        <use href="#gryphon"/>
+        <g id="tagSwing">
+          <path d="M126 168 C118 196 104 214 92 228" stroke="#000" stroke-width="2.5" fill="none"/>
+          <g transform="translate(44 226) rotate(-8)">
+            <path d="M14 0 H108 V62 H14 L0 48 V14 Z" fill="#F3E2AE" stroke="#D9C27E" stroke-width="2.5"/>
+            <circle cx="16" cy="31" r="5" fill="#E6F0F7" stroke="#D9C27E" stroke-width="2"/>
+            <text id="tagCount" x="64" y="34" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="26" fill="#000">0</text>
+            <text x="64" y="52" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="11" fill="#4A4F55">items waiting</text>
+          </g>
+        </g>
+      </svg>
+      <div class="hot">
+        <h3>Where things go missing</h3>
+        <p class="sub">Campus spots with the most posts, updated live.</p>
+        <ol id="hotspots"><li class="none">Hotspots show up once items are posted.</li></ol>
+      </div>
     </div>
   </section>
 
@@ -312,6 +375,11 @@ document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click",
 async function refresh() {
   const [{posts}, st] = await Promise.all([api(`/api/posts?kind=${tab}`), api("/api/stats")]);
   $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.reunited}</b> reunited.`;
+  $("#tagCount").textContent = st.open_found;
+  const hs = st.by_location || [], max = Math.max(1, ...hs.map(h => h.n));
+  $("#hotspots").innerHTML = hs.length
+    ? hs.slice(0, 5).map(h => `<li><span>${esc(h.location)}</span><span class="bar"><i style="width:${Math.round(h.n / max * 100)}%"></i></span><span class="n">${h.n}</span></li>`).join("")
+    : `<li class="none">Hotspots show up once items are posted.</li>`;
   $("#pins").innerHTML = posts.length
     ? posts.map(p => `<button class="tag-btn" data-id="${p.id}" style="all:unset;cursor:pointer;display:block" aria-label="See matches for ${esc(p.title)}">${tagHTML(p)}</button>`).join("")
     : `<div class="empty">Nothing ${tab} yet. ${tab === "found" ? "Found something? Post it above." : "Lost something? Post it above."}</div>`;
