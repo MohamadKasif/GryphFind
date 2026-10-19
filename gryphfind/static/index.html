@@ -92,6 +92,23 @@ img.mark{object-fit:contain;background:#fff;border-radius:50%;padding:3px;box-sh
 /* form */
 .panel{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:20px;margin:8px 0 32px;display:none}
 .panel.open{display:block}
+.panel{padding:0;overflow:hidden;border-width:4px}
+.panel .grid{padding:20px}
+.panel.lost{border-color:var(--red)}
+.panel.found{border-color:#B8860B}
+.mode-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 20px}
+.panel.lost .mode-banner{background:var(--red);color:#fff}
+.panel.found .mode-banner{background:var(--gold);color:var(--ink)}
+.mode-kicker{margin:0;font-weight:700;font-size:14px;opacity:.9}
+.mode-banner h2{font-size:clamp(26px,4vw,38px);font-weight:900;font-stretch:66%;margin:0}
+.mode-sub{margin:4px 0 0;font-size:15px;max-width:60ch}
+.mode-side{display:flex;gap:8px;flex-wrap:wrap}
+.mode-switch,.mode-close{border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:14px}
+.panel.lost .mode-switch{background:#fff;color:var(--red);border:2px solid #fff}
+.panel.found .mode-switch{background:var(--ink);color:#fff;border:2px solid var(--ink)}
+.mode-close{background:transparent;border:2px solid currentColor;color:inherit}
+.panel.lost .submit{background:var(--red)}
+.panel.found .submit{background:var(--ink);box-shadow:inset 0 -5px 0 var(--gold)}
 .grid{display:grid;grid-template-columns:260px 1fr;gap:20px}
 @media (max-width:720px){.grid{grid-template-columns:1fr}}
 .drop{border:3px dashed var(--muted);border-radius:6px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;cursor:pointer;position:relative;overflow:hidden;background:#F6F7F8}
@@ -300,7 +317,18 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
     </div>
   </section>
 
-  <form class="panel" id="form" novalidate>
+  <form class="panel" id="form" novalidate aria-labelledby="modeTitle">
+    <div class="mode-banner" id="modeBanner">
+      <div>
+        <p class="mode-kicker" id="modeKicker">Reporting</p>
+        <h2 id="modeTitle">Something you lost</h2>
+        <p class="mode-sub" id="modeSub"></p>
+      </div>
+      <div class="mode-side">
+        <button type="button" class="mode-switch" id="modeSwitch">Switch to found</button>
+        <button type="button" class="mode-close" id="modeClose" aria-label="Close the form">Cancel</button>
+      </div>
+    </div>
     <div class="grid">
       <div>
         <label class="drop" id="drop">
@@ -311,17 +339,17 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
       </div>
       <div>
         <div class="field">
-          <label for="title">What is it?</label>
+          <label for="title" id="lblTitle">What is it?</label>
           <input type="text" id="title" name="title" maxlength="120" placeholder="Blue Hydro Flask">
         </div>
         <div class="field">
-          <label for="description">Details</label>
+          <label for="description" id="lblDesc">Details</label>
           <textarea id="description" name="description" maxlength="1000" placeholder="Dented at the bottom, Guelph Gryphons sticker, black lid"></textarea>
           <p class="hint" id="detailHint">Stickers, scratches, colours. The more specific, the better the match.</p>
         </div>
         <div class="row">
           <div class="field">
-            <label for="location">Where?</label>
+            <label for="location" id="lblWhere">Where?</label>
             <input type="text" id="location" name="location" list="places" maxlength="80" placeholder="McLaughlin Library">
             <datalist id="places">
               <option>McLaughlin Library</option><option>University Centre</option><option>Rozanski Hall</option>
@@ -335,7 +363,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
           </div>
         </div>
         <div class="field">
-          <label for="contact">How can they reach you?</label>
+          <label for="contact" id="lblContact">How can they reach you?</label>
           <input type="text" id="contact" name="contact" maxlength="120" placeholder="uoguelph.ca email or Instagram handle">
         </div>
         <button class="submit" id="submit" type="submit">Post and find matches</button>
@@ -406,20 +434,41 @@ function miniHTML(p) {
     <div><b>${esc(p.title)}</b><span>${p.kind === "lost" ? "Lost" : "Found"}${p.location ? ", " + esc(p.location) : ""}</span></div></div>`;
 }
 
-// mode buttons
-document.querySelectorAll(".big").forEach(b => b.addEventListener("click", () => {
-  kind = b.dataset.kind;
-  document.querySelectorAll(".big").forEach(x => x.setAttribute("aria-pressed", x === b));
-  $("#form").classList.add("open");
-  $("#title").placeholder = kind === "lost" ? "Blue Hydro Flask" : "Water bottle";
-  $("#dropTitle").textContent = kind === "lost" ? "Add a photo if you have one" : "Take a photo of it";
-  $("#detailHint").textContent = kind === "lost"
-    ? "No photo? Describe it. The model matches words to photos."
-    : "Leave out one unique detail so the owner can prove it's theirs.";
-  $("#contact").placeholder = kind === "lost" ? "uoguelph.ca email or Instagram handle" : "Where you left it, e.g. UC front desk";
-  $("#form").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
-  $("#title").focus({preventScroll:true});
-}));
+// mode buttons: make it impossible to miss which form you're filling in
+const MODE = {
+  lost: {kicker: "You're reporting something you", title: "LOST", sub: "Describe it or add a photo. We'll check every found item on the board.",
+         lblTitle: "What did you lose?", lblDesc: "What does it look like?", lblWhere: "Where did you last have it?",
+         lblContact: "How can the finder reach you?", ph: "Blue Hydro Flask", contact: "uoguelph.ca email or Instagram handle",
+         drop: "Add a photo if you have one", hint: "No photo? Describe it. The model matches words to photos.",
+         submit: "Post my lost item and find matches", other: "found"},
+  found: {kicker: "You're reporting something you", title: "FOUND", sub: "Snap a photo so the owner recognizes it. Keep one unique detail to yourself to check their claim.",
+          lblTitle: "What did you find?", lblDesc: "What does it look like?", lblWhere: "Where did you find it?",
+          lblContact: "Where can the owner pick it up?", ph: "Water bottle", contact: "Where you left it, e.g. UC front desk",
+          drop: "Take a photo of it", hint: "Leave out one unique detail so the owner can prove it's theirs.",
+          submit: "Post the found item and find the owner", other: "lost"},
+};
+function setMode(k, scroll = true) {
+  kind = k; const m = MODE[k];
+  document.querySelectorAll(".big").forEach(x => x.setAttribute("aria-pressed", x.dataset.kind === k));
+  const f = $("#form"); f.classList.add("open"); f.classList.remove("lost", "found"); f.classList.add(k);
+  $("#modeKicker").textContent = m.kicker; $("#modeTitle").textContent = m.title; $("#modeSub").textContent = m.sub;
+  $("#modeSwitch").textContent = `Switch to ${m.other}`;
+  $("#lblTitle").textContent = m.lblTitle; $("#lblDesc").textContent = m.lblDesc;
+  $("#lblWhere").textContent = m.lblWhere; $("#lblContact").textContent = m.lblContact;
+  $("#title").placeholder = m.ph; $("#contact").placeholder = m.contact;
+  $("#dropTitle").textContent = m.drop; $("#detailHint").textContent = m.hint;
+  $("#submit").textContent = m.submit;
+  if (scroll) {
+    f.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+    $("#title").focus({preventScroll: true});
+  }
+}
+document.querySelectorAll(".big").forEach(b => b.addEventListener("click", () => setMode(b.dataset.kind)));
+$("#modeSwitch").addEventListener("click", () => setMode(MODE[kind].other, false));
+$("#modeClose").addEventListener("click", () => {
+  $("#form").classList.remove("open"); document.querySelectorAll(".big").forEach(x => x.setAttribute("aria-pressed", false));
+  $("#hero").scrollIntoView({block: "start"});
+});
 
 // photo preview
 $("#drop input").addEventListener("change", e => {
@@ -450,7 +499,7 @@ $("#form").addEventListener("submit", async e => {
     $("#form").classList.remove("open");
     showResults(res); refresh();
   } catch (err) { $("#error").textContent = err.message; }
-  finally { $("#submit").disabled = false; $("#submit").textContent = "Post and find matches"; }
+  finally { $("#submit").disabled = false; if (kind) $("#submit").textContent = MODE[kind].submit; }
 });
 
 function knot(score, i) {
