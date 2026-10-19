@@ -15,11 +15,16 @@ def post(c, **form):
     if "image" in form: data["image"] = (form["image"], "x.png")
     return c.post("/api/posts", data=data, content_type="multipart/form-data")
 
+FOUND_KEYS = {}
+
+
 def test_flow():
     c = app.test_client()
     assert c.get("/").status_code == 200
-    assert post(c, kind="found", title="Blue water bottle", image=img((20, 40, 200))).status_code == 201
-    assert post(c, kind="found", title="Red umbrella", image=img((200, 20, 20))).status_code == 201
+    for title, color in (("Blue water bottle", (20, 40, 200)), ("Red umbrella", (200, 20, 20))):
+        res = post(c, kind="found", title=title, image=img(color))
+        assert res.status_code == 201 and res.get_json()["key"]
+        FOUND_KEYS[title] = res.get_json()["key"]
     r = post(c, kind="lost", title="blue water bottle", image=img((25, 45, 205)))
     assert r.status_code == 201
     m = r.get_json()["matches"]
@@ -29,27 +34,47 @@ def test_flow():
     # text-only lost post still gets results
     r2 = post(c, kind="lost", title="red umbrella")
     assert r2.get_json()["matches"][0]["post"]["title"] == "Red umbrella"
-    # claim -> stays visible as "claimed"
-    lost_id, found_id = r.get_json()["post"]["id"], m[0]["post"]["id"]
-    cl = c.post("/api/claims", json={"a": lost_id, "b": found_id})
-    assert cl.status_code == 201
-    cid = cl.get_json()["claim"]["id"]
-    board = c.get("/api/posts?kind=found").get_json()["posts"]
-    assert any(p["id"] == found_id and p["status"] == "claimed" for p in board)
-    assert c.post("/api/claims", json={"a": lost_id, "b": found_id}).status_code == 409  # double claim
-    # wrong owner -> put back; that pair is never suggested again
-    assert c.post(f"/api/claims/{cid}/reject").status_code == 200
-    again = c.get(f"/api/posts/{lost_id}/matches").get_json()["matches"]
-    assert all(x["post"]["id"] != found_id for x in again)
-    assert all(p["status"] == "open" for p in c.get("/api/posts?kind=found").get_json()["posts"])
-    # real owner claims and confirms handover
-    real = post(c, kind="lost", title="blue water bottle", image=img((22, 42, 202))).get_json()
-    cid2 = c.post("/api/claims", json={"a": real["post"]["id"], "b": found_id}).get_json()["claim"]["id"]
-    assert c.post(f"/api/claims/{cid2}/confirm").status_code == 200
+    # --- roles ---------------------------------------------------------
+    finder_key = None
+    found_posts = c.get("/api/posts?kind=found").get_json()["posts"]
+    found_id = [p for p in found_posts if p["title"] == "Blue water bottle"][0]["id"]
+    lost_id, lost_key = r.get_json()["post"]["id"], r.get_json()["key"]
+    # a stranger can't claim using someone else's lost post
+    assert c.post("/api/claims", json={"lost_id": lost_id, "found_id": found_id, "key": "nope", "proof": "black lid"}).status_code == 409
+    # proof is required
+    assert c.post("/api/claims", json={"lost_id": lost_id, "found_id": found_id, "key": lost_key, "proof": ""}).status_code == 409
+    # real owner requests; a "wrong" person also requests the same bottle
+    req = c.post("/api/claims", json={"lost_id": lost_id, "found_id": found_id, "key": lost_key, "proof": "Gryphons sticker under the lid"})
+    assert req.status_code == 201
+    good_cid = req.get_json()["claim"]["id"]
+    assert c.post("/api/claims", json={"lost_id": lost_id, "found_id": found_id, "key": lost_key, "proof": "again"}).status_code == 409
+    wrong = post(c, kind="lost", title="blue bottle", image=img((24, 44, 204))).get_json()
+    bad_cid = c.post("/api/claims", json={"lost_id": wrong["post"]["id"], "found_id": found_id,
+                                          "key": wrong["key"], "proof": "it's blue"}).get_json()["claim"]["id"]
+    # item stays on the board with 2 requests waiting
+    assert c.get("/api/claims").get_json()["requests"][found_id] == 2
+    assert any(p["id"] == found_id for p in c.get("/api/posts?kind=found").get_json()["posts"])
+    # public history never leaks proofs
+    assert "proof" not in str(c.get("/api/claims").get_json())
+    # only the finder can decide: lost person and strangers are refused
+    assert c.post(f"/api/claims/{good_cid}/hand-over", json={"key": lost_key}).status_code == 403
+    assert c.post(f"/api/claims/{bad_cid}/decline", json={"key": "nope"}).status_code == 403
+    # the finder's key came back when the found post was made
+    finder_key = FOUND_KEYS["Blue water bottle"]
+    inbox = c.post("/api/mine", json={"keys": {found_id: finder_key}}).get_json()["posts"]
+    assert len(inbox) == 1 and len(inbox[0]["requests"]) == 2
+    assert {q["proof"] for q in inbox[0]["requests"]} == {"Gryphons sticker under the lid", "it's blue"}
+    # the lost person sees status only, no proofs of others
+    mine = c.post("/api/mine", json={"keys": {lost_id: lost_key}}).get_json()["posts"]
+    assert mine[0]["requests"][0]["status"] == "pending" and "proof" not in mine[0]["requests"][0]
+    # finder hands it to the right person -> the other request is declined automatically
+    assert c.post(f"/api/claims/{good_cid}/hand-over", json={"key": finder_key}).status_code == 200
+    statuses = {h["id"]: h["status"] for h in c.get("/api/claims").get_json()["claims"]}
+    assert statuses[good_cid] == "confirmed" and statuses[bad_cid] == "declined"
+    assert all(p["id"] != found_id for p in c.get("/api/posts?kind=found").get_json()["posts"])
+    assert c.post(f"/api/claims/{good_cid}/decline", json={"key": finder_key}).status_code == 403  # already answered
     st = c.get("/api/stats").get_json()
     assert st["reunited"] == 1 and st["open_found"] == 1
-    hist = c.get("/api/claims").get_json()["claims"]
-    assert {h["status"] for h in hist} == {"rejected", "confirmed"}
     # expiry: age the umbrella to 28 days -> expiring soon; to 31 -> gone
     umb = [p for p in c.get("/api/posts?kind=found").get_json()["posts"] if p["title"] == "Red umbrella"][0]
     assert umb["days_left"] == 30

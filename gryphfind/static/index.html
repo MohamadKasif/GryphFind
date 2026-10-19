@@ -204,6 +204,28 @@ textarea{min-height:84px;resize:vertical}
 .callout strong{display:block;font-family:Archivo,sans-serif;font-stretch:80%;font-weight:900;font-size:20px;margin-bottom:2px}
 .callout p{margin:0 0 10px}
 .callout button{background:var(--ink);color:#fff;border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer}
+.mine{display:grid;gap:16px;padding-bottom:48px}
+.mine-card{background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:16px}
+.mine-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.role{display:inline-block;font-size:13px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--ink);color:#fff}
+.role.found{background:var(--gold);color:var(--ink)}
+.mine-card h4{margin:14px 0 6px;font-size:16px}
+.req{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) auto;gap:14px;align-items:center;border-top:2px solid #E4E7EA;padding:12px 0}
+@media (max-width:760px){.req{grid-template-columns:1fr}}
+.proof{margin:0;background:#FFF8DC;border-left:5px solid var(--gold);padding:6px 10px;font-size:15px}
+.proof b{display:block;font-size:13px;color:var(--muted)}
+.req-actions{display:flex;gap:6px;flex-wrap:wrap}
+.req-actions .give{background:var(--ink);color:#fff;border:2px solid var(--ink);border-radius:4px;padding:6px 12px;font-weight:700;cursor:pointer}
+.req-actions .nope{background:var(--paper);color:var(--red);border:2px solid var(--red);border-radius:4px;padding:6px 12px;font-weight:700;cursor:pointer}
+.req.flash{outline:4px solid var(--gold);outline-offset:3px}
+.chip-you{display:inline-block;font-size:12px;font-weight:700;border:2px solid var(--ink);border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:middle}
+.claim-form{margin-top:10px;display:grid;gap:6px}
+.claim-form label{font-weight:700;font-size:15px;margin:0}
+.claim-form input{width:100%;padding:8px 10px;border:2px solid var(--ink);border-radius:4px}
+.claim-form .row2{display:flex;gap:6px;flex-wrap:wrap}
+.claim-form .send{background:var(--ink);color:#fff;border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer}
+.muted-note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.pill.declined{background:#E4E7EA}
 .hist-intro{background:var(--paper);border-left:6px solid var(--gold);padding:10px 14px;margin:0 0 4px;font-size:15px}
 .claim-row.flash{outline:4px solid var(--gold);outline-offset:3px}
 @media (prefers-reduced-motion:no-preference){.claim-row.flash{animation:flash 1.2s ease-in-out 3}@keyframes flash{50%{outline-color:var(--red)}}}
@@ -229,7 +251,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
     <nav class="nav" aria-label="Main">
       <a href="#board" data-go="found">Found<span class="long"> items</span></a>
       <a href="#board" data-go="lost">Lost<span class="long"> items</span></a>
-      <a href="#board" data-go="matches"><span class="long">Previous matches</span><span class="short">Matches</span></a>
+      <a href="#board" data-go="mine"><span class="long">My posts</span><span class="short">Mine</span></a>
       <button class="cta lost" data-report="lost"><span class="long">Report lost</span><span class="short">I lost</span></button>
       <button class="cta found" data-report="found"><span class="long">Report found</span><span class="short">I found</span></button>
     </nav>
@@ -330,6 +352,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
       <div class="tabs" role="tablist">
         <button role="tab" data-tab="found" aria-selected="true">Found items</button>
         <button role="tab" data-tab="lost" aria-selected="false">Lost items</button>
+        <button role="tab" data-tab="mine" aria-selected="false">My posts</button>
         <button role="tab" data-tab="matches" aria-selected="false">Previous matches</button>
       </div>
     </div>
@@ -345,7 +368,7 @@ footer{padding:24px 0 40px;font-size:14px;color:var(--muted)}
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let kind = null, tab = "found", meta = {demo: false, expiry_days: 30}, pending = {};
+let kind = null, tab = "found", meta = {demo: false, expiry_days: 30};
 const URGENT_DAYS = 3;
 const post_ = (path, body) => api(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
 
@@ -407,6 +430,12 @@ $("#drop input").addEventListener("change", e => {
 });
 
 // submit
+// ---- ownership: each post's secret key lives only in the browser that made it ----
+const KEYS = (() => { try { return JSON.parse(localStorage.getItem("gf-keys") || "{}"); } catch { return {}; } })();
+function saveKey(id, key) { KEYS[id] = key; try { localStorage.setItem("gf-keys", JSON.stringify(KEYS)); } catch {} }
+const isMine = id => Boolean(KEYS[id]);
+let requests = {};   // found post id -> number of open claim requests
+
 $("#form").addEventListener("submit", async e => {
   e.preventDefault(); $("#error").textContent = "";
   const fd = new FormData(e.target); fd.append("kind", kind);
@@ -416,6 +445,7 @@ $("#form").addEventListener("submit", async e => {
   $("#submit").disabled = true; $("#submit").textContent = "Comparing with the board…";
   try {
     const res = await api("/api/posts", {method: "POST", body: fd});
+    saveKey(res.post.id, res.key);
     e.target.reset(); const im = $("#drop img"); if (im) im.remove();
     $("#form").classList.remove("open");
     showResults(res); refresh();
@@ -431,54 +461,79 @@ function knot(score, i) {
   </div>`;
 }
 
+function reqBadge(id) {
+  const n = requests[id] || 0;
+  return n ? `<span class="flag">${n} claim request${n > 1 ? "s" : ""}, finder is checking</span>` : "";
+}
+
+// What the viewer may do with a candidate depends on who they are.
+function candidateActions(post, c) {
+  if (c.status === "resolved") return `<p class="notice">Already handed over.</p>`;
+  if (post.kind === "lost" && isMine(post.id)) {
+    return `<div class="actions"><button class="yes" data-lost="${post.id}" data-found="${c.id}">This is mine</button></div>`;
+  }
+  if (post.kind === "found" && isMine(post.id)) {
+    return `<p class="muted-note">If this is the owner, they'll send you a claim request. You'll review it in My posts.</p>`;
+  }
+  return `<p class="muted-note">Only the person who posted the lost item can claim it.</p>`;
+}
+
 function showResults({post, matches}) {
   const r = $("#results"); r.classList.add("open");
   const other = post.kind === "lost" ? "found" : "lost";
   const good = matches.filter(m => m.score >= 50);
+  const whose = isMine(post.id) ? `Your ${post.kind} post` : `This ${post.kind} post`;
   let html = `<button class="back" onclick="closeResults()">Back to the board</button>
     <h2>${good.length ? `${good.length} likely match${good.length > 1 ? "es" : ""}` : "No strong matches yet"}</h2>
-    <p>${good.length ? `Your ${post.kind} post is on the left, ${other} items on the right.` : `Your post is on the board now. When someone posts a ${other} item that looks like yours, it will show up here.`}</p>`;
+    <p>${good.length ? `${whose} is on the left, ${other} items on the right.` : `It's on the board now. When someone posts a ${other} item that looks like it, it will show up here.`}</p>`;
   if (!matches.length) html += `<div class="pair">${tagHTML(post)}</div>`;
   matches.forEach((m, i) => {
     const s = m.signals, sig = [s.img_img!=null&&`photo vs photo ${s.img_img}`, s.cross!=null&&`words vs photo ${s.cross}`, s.txt_txt!=null&&`words vs words ${s.txt_txt}`].filter(Boolean).join(", ");
     const c = m.post;
-    const extra = `${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
+    const extra = `${c.kind === "found" ? reqBadge(c.id) : ""}${m.why ? `<div class="why">${esc(m.why)}</div>` : ""}
       <p class="signals">${sig}</p>
       ${c.contact ? `<p><b>${c.kind === "found" ? "Pick up / contact" : "Owner"}:</b> ${esc(c.contact)}</p>` : ""}
-      <div class="actions">${c.status === "claimed"
-        ? `<span class="notice">Someone already claimed this.</span> ${pending[c.id] ? `<button class="putback" data-claim="${pending[c.id]}">It's actually mine, put it back</button>` : ""}`
-        : `<button class="yes" data-a="${post.id}" data-b="${c.id}">${post.kind === "lost" ? "This is mine" : "This is theirs"}</button>`}</div>`;
+      ${candidateActions(post, c)}`;
     html += `<div class="pair">${i === 0 ? tagHTML(post) : "<div></div>"}${knot(m.score, i)}${tagHTML(c, extra)}</div>`;
   });
   r.innerHTML = html;
-  r.querySelectorAll(".yes").forEach(b => b.addEventListener("click", async () => {
-    try {
-      const {claim} = await post_("/api/claims", {a: b.dataset.a, b: b.dataset.b});
-      b.parentElement.outerHTML = `<div class="callout" role="status">
-        <strong>Claimed. Next step: pick it up</strong>
-        <p>Both posts stay on the board with a "Claimed" badge, so the real owner can still spot them if this is a mix-up. After the handoff, open Previous matches and tap Handed over.</p>
-        <button type="button" class="go-matches" data-claim="${claim.id}">Go to Previous matches</button></div>`;
-      r.querySelectorAll(".go-matches").forEach(g => g.addEventListener("click", () => openMatches(g.dataset.claim)));
-    } catch (err) { b.parentElement.innerHTML = `<span class="notice bad">${esc(err.message)}</span>`; }
-    refresh();
-  }));
-  r.querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => {
-    await post_(`/api/claims/${b.dataset.claim}/reject`);
-    b.parentElement.innerHTML = `<span class="reunited">Put back on the board. You can claim it now.</span>`;
-    refresh();
+  // "This is mine" opens a small proof form; the request goes to the finder.
+  r.querySelectorAll(".yes").forEach(b => b.addEventListener("click", () => {
+    const box = b.parentElement;
+    box.outerHTML = `<form class="claim-form" data-lost="${b.dataset.lost}" data-found="${b.dataset.found}">
+        <label for="proof-${b.dataset.found}">Prove it's yours</label>
+        <input id="proof-${b.dataset.found}" maxlength="500" required placeholder="A detail only the owner knows: a scratch, what's inside, a name written on it">
+        <div class="row2"><button class="send" type="submit">Send to the finder</button></div>
+        <p class="muted-note">Only the finder sees this. They'll hand it over if it matches.</p>
+        <p class="notice bad" role="alert"></p></form>`;
+    const f = r.querySelector(`.claim-form[data-found="${b.dataset.found}"]`);
+    f.querySelector("input").focus();
+    f.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      try {
+        const {claim} = await post_("/api/claims", {lost_id: f.dataset.lost, found_id: f.dataset.found,
+                                                     key: KEYS[f.dataset.lost], proof: f.querySelector("input").value});
+        f.outerHTML = `<div class="callout" role="status">
+          <strong>Request sent to the finder</strong>
+          <p>They'll compare your answer with the detail they kept private, then hand it over. You can watch the status in My posts.</p>
+          <button type="button" class="go-mine" data-claim="${claim.id}">Go to My posts</button></div>`;
+        r.querySelectorAll(".go-mine").forEach(g => g.addEventListener("click", () => openTab("mine", g.dataset.claim)));
+        refresh();
+      } catch (err) { f.querySelector(".bad").textContent = err.message; }
+    });
   }));
   r.scrollIntoView({block: "start"});
 }
 function closeResults(){ $("#results").classList.remove("open"); $("#board").scrollIntoView({block:"start"}); }
 
-// board
+// ---- board ----
 document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
   tab = b.dataset.tab; document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b)); refresh();
 }));
 async function refresh() {
   const [st, cl, exp] = await Promise.all([api("/api/stats"), api("/api/claims"), api(`/api/expiring?days=${URGENT_DAYS}`)]);
-  pending = cl.pending || {};
-  $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.pending_claims}</b> waiting for handoff, <b>${st.reunited}</b> reunited. Posts stay up for ${Math.round(st.expiry_days)} days.`;
+  requests = cl.requests || {};
+  $("#stats").innerHTML = `<b>${st.open_found}</b> found items waiting, <b>${st.open_lost}</b> people looking, <b>${st.pending_claims}</b> claim requests open, <b>${st.reunited}</b> reunited. Posts stay up for ${Math.round(st.expiry_days)} days.`;
   for (const el of [$("#tagCount"), $("#mascotCount")]) if (el) el.textContent = st.open_found;
   const hs = st.by_location || [], max = Math.max(1, ...hs.map(h => h.n));
   $("#hotspots").innerHTML = hs.length
@@ -486,47 +541,102 @@ async function refresh() {
     : `<li class="none">Hotspots show up once items are posted.</li>`;
   renderAlarm(exp.posts || []);
   if (tab === "matches") return renderHistory(cl.claims || []);
+  if (tab === "mine") return renderMine();
   const {posts} = await api(`/api/posts?kind=${tab}`);
   $("#pins").className = "pins";
   $("#pins").innerHTML = posts.length
-    ? posts.map(p => `<article class="pin">${tagHTML(p, `<div class="pin-actions">
+    ? posts.map(p => `<article class="pin">${tagHTML(p, `${p.kind === "found" ? reqBadge(p.id) : ""}
+        ${isMine(p.id) ? `<p class="muted-note"><span class="chip-you">Your post</span></p>` : ""}
+        <div class="pin-actions">
         <button class="see" data-id="${p.id}">See matches</button>
-        ${p.status === "claimed" && pending[p.id] ? `<button class="putback" data-claim="${pending[p.id]}">Not theirs? Put it back</button>` : ""}
+        ${isMine(p.id) && requests[p.id] ? `<button class="review" type="button">Review requests</button>` : ""}
         ${meta.demo && p.days_left > URGENT_DAYS ? `<button class="demo" data-age="${p.id}" title="Demo only: pretend this was posted ${Math.round(meta.expiry_days - 2)} days ago">Demo: skip ahead</button>` : ""}
       </div>`)}</article>`).join("")
     : `<div class="empty">Nothing ${tab} yet. ${tab === "found" ? "Found something? Post it above." : "Lost something? Post it above."}</div>`;
   $("#pins").querySelectorAll(".see").forEach(b => b.addEventListener("click", async () => showResults(await api(`/api/posts/${b.dataset.id}/matches`))));
-  $("#pins").querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/reject`); refresh(); }));
+  $("#pins").querySelectorAll(".review").forEach(b => b.addEventListener("click", () => openTab("mine")));
   $("#pins").querySelectorAll("[data-age]").forEach(b => b.addEventListener("click", async () => { await post_(`/api/demo/age/${b.dataset.age}`, {days: meta.expiry_days - 2}); refresh(); }));
 }
 
 let flashClaim = null;
-async function openMatches(claimId) {
+async function openTab(name, claimId) {
   flashClaim = claimId || null;
   $("#results").classList.remove("open");
-  tab = "matches";
-  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === "matches"));
-  document.querySelectorAll("[data-go]").forEach(x => x.setAttribute("aria-current", x.dataset.go === "matches"));
+  tab = name;
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
+  document.querySelectorAll("[data-go]").forEach(x => x.setAttribute("aria-current", x.dataset.go === name));
   await refresh();
-  const row = flashClaim && document.querySelector(`.claim-row[data-claim="${flashClaim}"]`);
+  const row = flashClaim && document.querySelector(`[data-claim="${flashClaim}"]`);
   (row || $("#board")).scrollIntoView({block: row ? "center" : "start"});
 }
 
-const STATUS = {pending: "Waiting for handoff", confirmed: "Reunited", rejected: "Put back on the board"};
+// ---- My posts: the finder decides, the lost person watches ----
+const MINE_STATUS = {
+  found: {pending: "Waiting for you", confirmed: "You handed it over", declined: "You said not theirs"},
+  lost: {pending: "Waiting for the finder", confirmed: "Handed over to you", declined: "Finder said not a match"},
+};
+async function renderMine() {
+  $("#pins").className = "mine";
+  const ids = Object.keys(KEYS);
+  if (!ids.length) {
+    $("#pins").innerHTML = `<div class="empty">Posts you make on this device show up here. Only the device that made a post can manage it.</div>`;
+    return;
+  }
+  const {posts} = await post_("/api/mine", {keys: KEYS});
+  if (!posts.length) { $("#pins").innerHTML = `<div class="empty">None of your posts are on the board any more.</div>`; return; }
+  $("#pins").innerHTML = posts.map(({post: p, requests: rq}) => {
+    const finder = p.kind === "found";
+    const open = rq.filter(x => x.status === "pending").length;
+    const head = `<div class="mine-head">${miniHTML(p)}
+        <span class="role ${p.kind}">${finder ? "You found this" : "You lost this"}</span></div>`;
+    if (finder) {
+      const body = rq.length ? rq.map(x => `<div class="req ${x.id === flashClaim ? "flash" : ""}" data-claim="${x.id}">
+          ${miniHTML(x.other)}
+          <div><p class="proof"><b>Their proof</b>${esc(x.proof)}</p>
+            ${x.other.contact ? `<p class="muted-note">Reach them: ${esc(x.other.contact)}</p>` : ""}</div>
+          <div>${x.status === "pending" ? `<div class="req-actions">
+              <button class="give" data-claim="${x.id}" data-name="${esc(x.other.title)}">Hand over to them</button>
+              <button class="nope" data-claim="${x.id}">Not theirs</button></div>`
+            : `<span class="pill ${x.status}">${MINE_STATUS.found[x.status] || x.status}</span>`}</div></div>`).join("")
+        : `<p class="muted-note">No claim requests yet. When the owner finds your post, their request and proof appear here.</p>`;
+      return `<article class="mine-card">${head}
+        <h4>Claim requests${open ? ` (${open} waiting)` : ""}</h4>
+        ${open ? `<p class="muted-note">Compare each answer with the detail you kept out of your post. Only you can hand this item over.</p>` : ""}
+        ${body}</article>`;
+    }
+    const body = rq.length ? rq.map(x => `<div class="req ${x.id === flashClaim ? "flash" : ""}" data-claim="${x.id}">
+        ${miniHTML(x.other)}
+        <div>${x.other.contact ? `<p class="muted-note">Pick up / contact: ${esc(x.other.contact)}</p>` : ""}</div>
+        <div><span class="pill ${x.status}">${MINE_STATUS.lost[x.status] || x.status}</span></div></div>`).join("")
+      : `<p class="muted-note">You haven't claimed anything yet. Open See matches on your post and tap This is mine.</p>`;
+    return `<article class="mine-card">${head}<h4>Your claim requests</h4>${body}</article>`;
+  }).join("");
+  $("#pins").querySelectorAll(".give").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`Hand this over to the person who posted "${b.dataset.name}"? Any other requests for it will be declined.`)) return;
+    await decide(b.dataset.claim, "hand-over");
+  }));
+  $("#pins").querySelectorAll(".nope").forEach(b => b.addEventListener("click", () => decide(b.dataset.claim, "decline")));
+}
+async function decide(claimId, action) {
+  // the finder's key is the key of the found post this request belongs to
+  const {posts} = await post_("/api/mine", {keys: KEYS});
+  const owner = posts.find(x => x.post.kind === "found" && x.requests.some(r => r.id === claimId));
+  if (!owner) return;
+  try { await post_(`/api/claims/${claimId}/${action}`, {key: KEYS[owner.post.id]}); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+// ---- Previous matches: public, read-only ----
+const STATUS = {pending: "Finder is checking", confirmed: "Handed over", declined: "Not a match", rejected: "Not a match"};
 function renderHistory(claims) {
   $("#pins").className = "hist";
-  const intro = `<p class="hist-intro"><b>How this works:</b> every "This is mine" lands here. Tap <b>Handed over</b> once the item is back with its owner, or <b>Wrong owner, put back</b> if it was a mix-up and both posts go back on the board.</p>`;
-  $("#pins").innerHTML = claims.length ? intro + claims.map(c => `<article class="claim-row ${c.id === flashClaim ? "flash" : ""}" data-claim="${c.id}">
+  const intro = `<p class="hist-intro"><b>Public record.</b> Every claim request shows up here. Only the person who found an item can hand it over, so nobody can take something just by tapping a button.</p>`;
+  $("#pins").innerHTML = claims.length ? intro + claims.map(c => `<article class="claim-row" data-claim="${c.id}">
       ${miniHTML(c.lost)}${miniHTML(c.found)}
-      <div><span class="pill ${c.status}">${STATUS[c.status]}</span>
-        <div class="meta">Claimed ${ago(c.created_at)}</div>
-        ${c.status === "pending" ? `<div class="hist-actions">
-          <button class="done" data-claim="${c.id}">Handed over</button>
-          <button class="putback" data-claim="${c.id}">Wrong owner, put back</button></div>` : ""}
-      </div></article>`).join("")
-    : `<div class="empty">No matches yet. When someone taps "This is mine", the pair shows up here until it's handed over.</div>`;
-  $("#pins").querySelectorAll(".done").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/confirm`); refresh(); }));
-  $("#pins").querySelectorAll(".putback").forEach(b => b.addEventListener("click", async () => { await post_(`/api/claims/${b.dataset.claim}/reject`); refresh(); }));
+      <div><span class="pill ${c.status}">${STATUS[c.status] || c.status}</span>
+        <div class="meta">Requested ${ago(c.created_at)}</div></div></article>`).join("")
+    : `<div class="empty">No claims yet. When someone asks a finder for an item, it shows up here.</div>`;
 }
 
 // ---- red alarm + device notifications ----

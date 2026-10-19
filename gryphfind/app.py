@@ -107,7 +107,8 @@ def create_post():
         p.title = f"{kind.title()} {p.category}"
 
     store.add(p)
-    return jsonify(post=p.public(), matches=_with_explanations(p, store.matches(p))), 201
+    key = store.new_key(p.id)  # only this browser gets it; we keep a hash
+    return jsonify(post=p.public(), key=key, matches=_with_explanations(p, store.matches(p))), 201
 
 
 @app.get("/api/posts")
@@ -126,34 +127,50 @@ def post_matches(pid):
 
 @app.get("/api/claims")
 def list_claims():
-    return jsonify(claims=store.claims(), pending=store.pending_claim_ids())
+    """Public, read-only history plus request counts for board badges."""
+    return jsonify(claims=store.claims(), requests=store.pending_counts())
+
+
+def _body():
+    return request.get_json(silent=True) or {}
 
 
 @app.post("/api/claims")
-def make_claim():
-    body = request.get_json(silent=True) or {}
+def request_item():
+    b = _body()
     try:
-        return jsonify(claim=store.claim(body.get("a", ""), body.get("b", ""))), 201
+        claim = store.request(str(b.get("lost_id", "")), str(b.get("found_id", "")),
+                              str(b.get("key", "")), str(b.get("proof", "")))
     except ClaimError as e:
         abort(409, str(e))
+    return jsonify(claim=claim), 201
 
 
-@app.post("/api/claims/<cid>/confirm")
-def confirm_claim(cid):
+@app.post("/api/claims/<cid>/hand-over")
+def hand_over(cid):
     try:
-        store.confirm(cid)
+        store.hand_over(cid, str(_body().get("key", "")))
     except ClaimError as e:
-        abort(409, str(e))
+        abort(403, str(e))
     return jsonify(ok=True)
 
 
-@app.post("/api/claims/<cid>/reject")
-def reject_claim(cid):
+@app.post("/api/claims/<cid>/decline")
+def decline(cid):
     try:
-        store.reject(cid)
+        store.decline(cid, str(_body().get("key", "")))
     except ClaimError as e:
-        abort(409, str(e))
+        abort(403, str(e))
     return jsonify(ok=True)
+
+
+@app.post("/api/mine")
+def mine():
+    """Keys travel in the request body (never the URL)."""
+    keys = _body().get("keys") or {}
+    if not isinstance(keys, dict):
+        abort(400, "keys must be an object of post id to key")
+    return jsonify(posts=store.mine(keys))
 
 
 @app.get("/api/expiring")
@@ -179,6 +196,7 @@ def stats():
 
 
 @app.errorhandler(400)
+@app.errorhandler(403)
 @app.errorhandler(404)
 @app.errorhandler(409)
 def err(e):

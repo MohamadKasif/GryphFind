@@ -6,15 +6,21 @@ SnowflakeStore - posts live in a Snowflake table with VECTOR(FLOAT, 512) columns
 
 Shared rules (BaseStore):
 - Posts expire EXPIRY_DAYS (default 30) after they're created and drop off the board.
-- "This is mine" creates a *pending claim*. Both posts stay on the board marked
-  "claimed" so the real owner can still see them and put them back if it was wrong.
-- A claim is then either confirmed (handed over -> both resolved) or rejected
-  (both back to open, and that pair is never suggested again).
+- Every post gets a secret owner key (only its SHA-256 hash is stored). The browser
+  that made the post keeps the key; that's how we know who the finder is.
+- The person who lost something sends a *claim request* to a found item, with a
+  private proof only the finder sees. Several people can request the same item.
+- Only the finder (holder of the found post's key) can hand it over to one
+  requester (everything else on that item is declined) or decline a request.
+  Declined pairs are never suggested again.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import math
+import secrets
 import os
 import sqlite3
 import time
@@ -122,60 +128,114 @@ class BaseStore:
 
     def rejected_pairs(self, pid: str) -> set[str]:
         rows = self._q(
-            f"SELECT lost_id, found_id FROM claims WHERE status='rejected' AND (lost_id={self.P} OR found_id={self.P})",
-            (pid, pid),
-        )
+            f"SELECT lost_id, found_id FROM claims WHERE status IN ('rejected','declined') "
+            f"AND (lost_id={self.P} OR found_id={self.P})", (pid, pid))
         return {r["found_id"] if r["lost_id"] == pid else r["lost_id"] for r in rows}
 
-    # ---- claims ----
-    def claim(self, a: str, b: str) -> dict:
-        pa, pb = self.get(a), self.get(b)
-        if not pa or not pb or pa.kind == pb.kind:
-            raise ClaimError("Pick one lost and one found item.")
-        lost, found = (pa, pb) if pa.kind == "lost" else (pb, pa)
-        for p in (lost, found):
-            if p.status != "open":
-                raise ClaimError(f"'{p.title}' is already claimed. If that claim was wrong, put it back first.")
-        cid = uuid.uuid4().hex[:12]
-        self._x(f"INSERT INTO claims (id, lost_id, found_id, created_at, status) VALUES ({self._ph(5)})",
-                (cid, lost.id, found.id, time.time(), "pending"))
-        self._x(f"UPDATE posts SET status='claimed' WHERE id IN ({self._ph(2)})", (lost.id, found.id))
-        return {"id": cid, "lost_id": lost.id, "found_id": found.id, "status": "pending"}
+    # ---- ownership ----
+    @staticmethod
+    def _hash(key: str) -> str:
+        return hashlib.sha256(key.encode()).hexdigest()
 
+    def new_key(self, pid: str) -> str:
+        key = secrets.token_urlsafe(18)
+        self._x(f"INSERT INTO post_keys (post_id, key_hash) VALUES ({self._ph(2)})", (pid, self._hash(key)))
+        return key
+
+    def owns(self, pid: str, key: str | None) -> bool:
+        if not key:
+            return False
+        rows = self._q(f"SELECT key_hash FROM post_keys WHERE post_id={self.P}", (pid,))
+        return bool(rows) and hmac.compare_digest(rows[0]["key_hash"], self._hash(key))
+
+    # ---- claims ----
     def _claim(self, cid: str) -> dict:
         rows = self._q(f"SELECT * FROM claims WHERE id={self.P}", (cid,))
         if not rows:
             raise ClaimError("That claim doesn't exist.")
         return rows[0]
 
-    def confirm(self, cid: str) -> None:
+    def request(self, lost_id: str, found_id: str, key: str, proof: str) -> dict:
+        """The person who lost something asks the finder for an item."""
+        lost, found = self.get(lost_id), self.get(found_id)
+        if not lost or not found or lost.kind != "lost" or found.kind != "found":
+            raise ClaimError("Pick your lost post and a found item.")
+        if not self.owns(lost.id, key):
+            raise ClaimError("Only the person who posted the lost item can claim from this device.")
+        if found.status == "resolved" or lost.status == "resolved":
+            raise ClaimError("This item has already been handed over.")
+        if found.id in self.rejected_pairs(lost.id):
+            raise ClaimError("The finder already said this isn't a match.")
+        if self._q(f"SELECT id FROM claims WHERE status='pending' AND lost_id={self.P} AND found_id={self.P}",
+                   (lost.id, found.id)):
+            raise ClaimError("You've already asked the finder about this item.")
+        proof = (proof or "").strip()[:500]
+        if len(proof) < 3:
+            raise ClaimError("Add a detail only the owner would know, so the finder can check it's yours.")
+        cid = uuid.uuid4().hex[:12]
+        self._x(f"INSERT INTO claims (id, lost_id, found_id, created_at, status) VALUES ({self._ph(5)})",
+                (cid, lost.id, found.id, time.time(), "pending"))
+        self._x(f"INSERT INTO claim_proofs (claim_id, proof) VALUES ({self._ph(2)})", (cid, proof))
+        return {"id": cid, "lost_id": lost.id, "found_id": found.id, "status": "pending"}
+
+    def _finder_check(self, cid: str, key: str) -> dict:
         c = self._claim(cid)
+        if not self.owns(c["found_id"], key):
+            raise ClaimError("Only the person who found this item can decide.")
         if c["status"] != "pending":
-            raise ClaimError("Only a pending claim can be marked handed over.")
-        self._x(f"UPDATE claims SET status='confirmed', updated_at={self.P} WHERE id={self.P}", (time.time(), cid))
+            raise ClaimError("This request has already been answered.")
+        return c
+
+    def hand_over(self, cid: str, key: str) -> None:
+        """Finder confirms the owner. Every other open request on either post is declined."""
+        c = self._finder_check(cid, key)
+        now = time.time()
+        self._x(f"UPDATE claims SET status='declined', updated_at={self.P} WHERE status='pending' "
+                f"AND id<>{self.P} AND (found_id={self.P} OR lost_id={self.P})",
+                (now, cid, c["found_id"], c["lost_id"]))
+        self._x(f"UPDATE claims SET status='confirmed', updated_at={self.P} WHERE id={self.P}", (now, cid))
         self._x(f"UPDATE posts SET status='resolved' WHERE id IN ({self._ph(2)})", (c["lost_id"], c["found_id"]))
 
-    def reject(self, cid: str) -> None:
-        c = self._claim(cid)
-        if c["status"] == "rejected":
-            return
-        self._x(f"UPDATE claims SET status='rejected', updated_at={self.P} WHERE id={self.P}", (time.time(), cid))
-        self._x(f"UPDATE posts SET status='open' WHERE id IN ({self._ph(2)})", (c["lost_id"], c["found_id"]))
+    def decline(self, cid: str, key: str) -> None:
+        self._finder_check(cid, key)
+        self._x(f"UPDATE claims SET status='declined', updated_at={self.P} WHERE id={self.P}", (time.time(), cid))
 
     def claims(self, limit: int = 50) -> list[dict]:
+        """Public history. Never includes proofs."""
         out = []
         for c in self._q(f"SELECT * FROM claims ORDER BY created_at DESC LIMIT {int(limit)}", ()):
             lost, found = self.get(c["lost_id"]), self.get(c["found_id"])
             if lost and found:
-                out.append({**{k: c[k] for k in ("id", "status", "created_at", "updated_at")},
+                out.append({**{k: c.get(k) for k in ("id", "status", "created_at", "updated_at")},
                             "lost": lost.public(), "found": found.public()})
         return out
 
-    def pending_claim_ids(self) -> dict[str, str]:
-        """post id -> pending claim id, so the board can offer 'put it back'."""
-        out = {}
-        for c in self._q("SELECT id, lost_id, found_id FROM claims WHERE status='pending'", ()):
-            out[c["lost_id"]] = out[c["found_id"]] = c["id"]
+    def pending_counts(self) -> dict[str, int]:
+        """found post id -> number of open claim requests (for board badges)."""
+        return {r["found_id"]: r["n"] for r in self._q(
+            "SELECT found_id, COUNT(*) AS n FROM claims WHERE status='pending' GROUP BY found_id", ())}
+
+    def mine(self, keys: dict[str, str]) -> list[dict]:
+        """Posts this device owns, with the claim requests that concern them.
+        Finders see each requester's proof and contact; requesters see status only."""
+        out = []
+        for pid, key in list(keys.items())[:100]:
+            p = self.get(str(pid))
+            if not p or not self.owns(p.id, str(key)):
+                continue
+            col = "found_id" if p.kind == "found" else "lost_id"
+            reqs = []
+            for c in self._q(f"SELECT * FROM claims WHERE {col}={self.P} ORDER BY created_at DESC", (p.id,)):
+                other = self.get(c["lost_id"] if p.kind == "found" else c["found_id"])
+                if not other:
+                    continue
+                r = {"id": c["id"], "status": c["status"], "created_at": c["created_at"], "other": other.public()}
+                if p.kind == "found":
+                    pr = self._q(f"SELECT proof FROM claim_proofs WHERE claim_id={self.P}", (c["id"],))
+                    r["proof"] = pr[0]["proof"] if pr else ""
+                reqs.append(r)
+            out.append({"post": p.public(), "requests": reqs})
+        out.sort(key=lambda x: x["post"]["created_at"], reverse=True)
         return out
 
     # ---- stats ----
@@ -211,7 +271,9 @@ class LocalStore(BaseStore):
                 created_at REAL, status TEXT, img_vec BLOB, txt_vec BLOB);
                CREATE TABLE IF NOT EXISTS claims (
                 id TEXT PRIMARY KEY, lost_id TEXT, found_id TEXT,
-                created_at REAL, updated_at REAL, status TEXT);"""
+                created_at REAL, updated_at REAL, status TEXT);
+               CREATE TABLE IF NOT EXISTS post_keys (post_id TEXT PRIMARY KEY, key_hash TEXT);
+               CREATE TABLE IF NOT EXISTS claim_proofs (claim_id TEXT PRIMARY KEY, proof TEXT);"""
         )
         self.db.commit()
 
@@ -281,6 +343,8 @@ class SnowflakeStore(BaseStore):
         self._x("""CREATE TABLE IF NOT EXISTS CLAIMS (
                 ID STRING PRIMARY KEY, LOST_ID STRING, FOUND_ID STRING,
                 CREATED_AT FLOAT, UPDATED_AT FLOAT, STATUS STRING)""", ())
+        self._x("CREATE TABLE IF NOT EXISTS POST_KEYS (POST_ID STRING PRIMARY KEY, KEY_HASH STRING)", ())
+        self._x("CREATE TABLE IF NOT EXISTS CLAIM_PROOFS (CLAIM_ID STRING PRIMARY KEY, PROOF STRING)", ())
 
     def _cur(self):
         from snowflake.connector import DictCursor
